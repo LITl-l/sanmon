@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package sanmon.guardrails.v1;
+
+option go_package = "github.com/sanmon/middleware/proto/guardrailsv1";
+
+// The guardrails validation service.
+service GuardrailsService {
+  // Validate a structured action against loaded CUE policies.
+  rpc Validate(ValidateRequest) returns (ValidateResponse);
+
+  // Reload policies from disk.
+  rpc ReloadPolicies(ReloadPoliciesRequest) returns (ReloadPoliciesResponse);
+}
+
+message ValidateRequest {
+  // The structured action as JSON bytes.
+  bytes action_json = 1;
+
+  // Optional: override which domain policy to apply.
+  string domain = 2;
+}
+
+message ValidateResponse {
+  bool pass = 1;
+  repeated Violation violations = 2;
+  // Validation latency in microseconds.
+  int64 latency_us = 3;
+}
+
+message Violation {
+  string rule = 1;
+  string message = 2;
+  string path = 3;
+  Severity severity = 4;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_ERROR = 1;
+  SEVERITY_WARNING = 2;
+}
+
+message ReloadPoliciesRequest {}
+
+message ReloadPoliciesResponse {
+  bool success = 1;
+  string message = 2;
+}

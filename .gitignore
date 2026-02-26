@@ -1,0 +1,31 @@
+# Nix / direnv
+.direnv/
+result
+
+# Go
+.go/
+vendor/
+
+# Node
+node_modules/
+dist/
+
+# Lean / elan
+.elan/
+.lake/
+lake-packages/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
