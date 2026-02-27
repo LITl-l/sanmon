@@ -1,166 +1,156 @@
 # sanmon Implementation Plan
 
-## Phase 1: Core Data Model & JSON Schema
+## Design Principles
 
-**Goal**: Define the unified action format and generate JSON Schema for constrained decoding.
-
-### Tasks
-
-- [x] Define Zod schemas for all action types (`schema/src/actions.ts`)
-- [x] Create JSON Schema generator (`schema/src/generate.ts`)
-- [ ] Run `make schema` and validate generated JSON against Outlines/XGrammar requirements
-- [ ] Add domain-specific parameter schemas (browser params, API params, etc.)
-- [ ] Write unit tests for schema validation (valid/invalid action examples)
-- [ ] Verify generated schema works with at least one constrained decoding engine
-
-### Deliverable
-`schema/generated/action-schema.json` — a self-contained JSON Schema usable by constrained decoding engines.
+- **CUE as single source of truth**: Structure and policy are defined once in CUE. JSON Schema and other artifacts are derived.
+- **Library first**: Build a Go library (`sanmon-core`) before wrapping it in a gRPC server.
+- **Test first**: Golden test suite drives development. Every phase starts with test data.
+- **Lean for meta-proofs**: Lean proves properties about the policy system, not individual rules.
 
 ---
 
-## Phase 2: CUE Policy Engine
+## Phase 1: CUE Schema + Policy Unification & Golden Tests
 
-**Goal**: Build the CUE validation runtime that checks structured actions against policies.
+**Goal**: Establish CUE as the single source of truth for both structure and policy. Build a golden test suite that drives all subsequent development.
 
 ### Tasks
 
 - [x] Define base action schema in CUE (`policy/base/action.cue`)
 - [x] Define domain-specific policies (browser, API, database, IaC)
-- [ ] Implement Go validation engine (`middleware/internal/validator/`)
-  - [ ] Load CUE policies from filesystem
-  - [ ] Accept JSON action, evaluate against applicable policies
-  - [ ] Return structured ValidationResult (pass/fail + violations)
-  - [ ] Support policy hot-reload (no server restart)
-- [ ] Implement policy composition
-  - [ ] AND composition (all policies must pass)
-  - [ ] Domain routing (select policy by `context.domain`)
-  - [ ] Base + override merging
-- [ ] Write integration tests
-  - [ ] Valid actions pass each domain policy
-  - [ ] Known violations are correctly detected
-  - [ ] Violation messages are actionable
-- [ ] Benchmark: confirm < 10ms validation latency
+- [ ] Consolidate structural schema into CUE (eliminate separate TypeScript/Zod layer)
+  - [ ] Move action type definitions from `schema/src/actions.ts` into CUE
+  - [ ] Verify CUE schema can express all current Zod constraints
+  - [ ] Generate JSON Schema from CUE (`cue export --out openapi`)
+  - [ ] Validate generated JSON Schema works with constrained decoding engines
+- [ ] Build golden test suite
+  - [ ] `testdata/browser/valid/*.json` — valid browser actions
+  - [ ] `testdata/browser/invalid/*.json` — browser policy violations
+  - [ ] `testdata/api/valid/*.json` / `testdata/api/invalid/*.json`
+  - [ ] `testdata/database/valid/*.json` / `testdata/database/invalid/*.json`
+  - [ ] `testdata/iac/valid/*.json` / `testdata/iac/invalid/*.json`
+  - [ ] Each invalid case annotated with expected violation rule + message
+- [ ] `cue vet` passes for all valid cases, fails for all invalid cases
+- [ ] Remove `schema/` TypeScript directory (no longer needed)
 
 ### Deliverable
-Go package `middleware/internal/validator` that validates JSON against CUE policies programmatically.
+- CUE as sole schema+policy definition
+- `testdata/` golden test suite
+- `make schema` generates JSON Schema from CUE
 
 ---
 
-## Phase 3: Lean Formal Proofs
+## Phase 2: Go Validation Library (sanmon-core)
 
-**Goal**: Prove that the policy rule sets are consistent and safe.
+**Goal**: Build the core Go library that loads CUE policies and validates actions in-process.
 
 ### Tasks
 
-- [x] Define action model as Lean inductive types (`prover/VerifiedGuardrails/Action.lean`)
-- [x] Define safety properties (`prover/VerifiedGuardrails/Safety.lean`)
-- [x] Scaffold policy formalization (`prover/VerifiedGuardrails/Policy.lean`)
-- [ ] Define concrete state transition functions per domain
-  - [ ] Browser: state = (current_url, page_history, form_state)
-  - [ ] API: state = (auth_state, call_history, rate_count)
-  - [ ] Database: state = (table_states, transaction_state)
-  - [ ] IaC: state = (resource_inventory, pending_changes)
-- [ ] Prove safety invariants per domain
-  - [ ] Browser: "no navigation outside whitelist reachable"
-  - [ ] Database: "no unfiltered DELETE/UPDATE reachable"
-  - [ ] IaC: "no destroy action reachable"
-- [ ] Prove policy consistency: no two rules contradict
-- [ ] Prove unreachability: forbidden states have no valid action path
+- [ ] Create `middleware/pkg/sanmon/` package
+  - [ ] `engine.go`: `Engine` interface (Validate, ReloadPolicies, ExportJSONSchema)
+  - [ ] `loader.go`: CUE policy loader (base + domain composition)
+  - [ ] `validator.go`: CUE runtime evaluation against loaded policies
+  - [ ] `result.go`: Structured ValidationResult (pass/fail + violations)
+- [ ] Policy composition logic
+  - [ ] AND composition (all policies must pass)
+  - [ ] Domain routing (select policy by `context.domain`)
+  - [ ] Base + domain-specific merge
+- [ ] JSON Schema export from loaded CUE (`ExportJSONSchema`)
+- [ ] Write unit tests using golden test suite from Phase 1
+  - [ ] All valid golden cases pass validation
+  - [ ] All invalid golden cases fail with expected violations
+  - [ ] Violation messages are actionable
+- [ ] Policy hot-reload (watch filesystem, atomic swap)
+- [ ] Benchmark: confirm < 10ms validation latency
+- [ ] `make test` runs full golden suite
 
 ### Deliverable
-Lean proofs that typecheck (`lake build` succeeds) for each domain's core safety properties.
+Go package `middleware/pkg/sanmon` — importable library for in-process validation.
 
 ---
 
-## Phase 4: Middleware Integration
+## Phase 3: gRPC Server
 
-**Goal**: Ship a gRPC server that agents can call for validation, with retry loop.
+**Goal**: Wrap sanmon-core in a gRPC server for cross-language / remote use.
 
 ### Tasks
 
 - [x] Define protobuf service (`middleware/proto/guardrails.proto`)
 - [ ] Generate Go gRPC code (`make proto`)
 - [ ] Implement gRPC server (`middleware/cmd/server/`)
-  - [ ] Wire `Validate` RPC to CUE validator
+  - [ ] Wire `Validate` RPC to sanmon-core Engine
   - [ ] Wire `ReloadPolicies` RPC
-  - [ ] Add request logging and metrics
+  - [ ] Add request logging and metrics (latency, pass/fail counts)
   - [ ] Add health check endpoint
 - [ ] Implement retry loop (`middleware/internal/retry/`)
-  - [ ] Accept LLM provider config
   - [ ] On validation failure: construct re-prompt with violation reasons
   - [ ] Re-submit to LLM with constrained decoding
   - [ ] Configurable max retries (default 3)
   - [ ] Return final result or aggregated errors
-- [ ] Implement Go client library (`middleware/pkg/client/`)
 - [ ] Add HTTP/REST gateway (optional, for non-gRPC clients)
 - [ ] Write end-to-end tests: mock LLM → validate → pass/fail → retry
 
 ### Deliverable
-Running gRPC server (`middleware/cmd/server`) with `Validate` and `ReloadPolicies` RPCs.
+Running gRPC server (`middleware/cmd/server`) importing `sanmon-core`.
 
 ---
 
-## Phase 5: cue2lean Theorem Generator
+## Phase 4: JSON Schema Generation Pipeline
 
-**Goal**: Automatically translate CUE policy changes into Lean theorem statements.
+**Goal**: Automate JSON Schema generation from CUE for constrained decoding engine integration.
 
 ### Tasks
 
-- [ ] Parse CUE policy files programmatically (Go CUE API)
-- [ ] Map CUE constraints to Lean propositions
-  - [ ] Enum constraints → finite type membership
-  - [ ] String patterns → predicate functions
-  - [ ] Numeric bounds → inequality propositions
-  - [ ] Whitelist/blacklist → set membership
-- [ ] Generate Lean `.lean` files with theorem statements
-- [ ] Integrate into CI: policy change → generate theorems → `lake build`
-- [ ] Handle incremental updates (only regenerate for changed policies)
+- [ ] `make schema` target: `cue export` → `generated/action-schema.json`
+- [ ] Per-domain schema export (browser-only, api-only, etc.)
+- [ ] Schema versioning (embed git hash or semver)
+- [ ] Validate generated schema against OpenAPI 3.0 spec
+- [ ] Integration test: feed generated schema to Outlines / XGrammar
+- [ ] Document schema usage for each constrained decoding engine
 
 ### Deliverable
-`tools/cue2lean` CLI that reads `policy/**/*.cue` and outputs `prover/VerifiedGuardrails/Policy/*.lean`.
+`generated/` directory with per-domain JSON Schema files, automatically derived from CUE.
 
 ---
 
-## Phase 6: Domain Policy Templates
+## Phase 5: Lean Meta-Proofs
 
-**Goal**: Production-ready policy templates for each domain.
+**Goal**: Prove meta-properties of the policy system in Lean 4.
 
 ### Tasks
 
-- [ ] Browser policy template with realistic defaults
-  - [ ] Common SaaS URL patterns
-  - [ ] Standard dangerous selector patterns
-  - [ ] PII detection in input values
-- [ ] API policy template
-  - [ ] REST API convention patterns
-  - [ ] OAuth/Bearer token enforcement
-  - [ ] Common dangerous endpoints
-- [ ] Database policy template
-  - [ ] Common PII column names
-  - [ ] Audit table protections
-  - [ ] Transaction isolation rules
-- [ ] IaC policy template
-  - [ ] AWS/GCP/Azure resource type catalogs
-  - [ ] Security group best practices
-  - [ ] Cost-control constraints (instance size limits)
-- [ ] Documentation for each template: what it protects and how to customize
+- [x] Define action model as Lean inductive types (`prover/VerifiedGuardrails/Action.lean`)
+- [x] Define safety properties (`prover/VerifiedGuardrails/Safety.lean`)
+- [ ] Prove policy consistency
+  - [ ] No two rules in a domain contradict each other
+  - [ ] Base + domain merge preserves all base invariants
+- [ ] Prove gate monotonicity
+  - [ ] Actions passing CUE validation (Gate 2) conform to JSON Schema (Gate 1)
+  - [ ] Structural validity is a subset of semantic validity
+- [ ] Prove policy completeness
+  - [ ] Every action type has at least one applicable policy
+  - [ ] No action type falls through without evaluation
+- [ ] Prove composition safety
+  - [ ] Adding a new domain policy cannot break existing domain policies
+  - [ ] Policy merge is associative and commutative where applicable
+- [ ] `lake build` succeeds for all proofs
 
 ### Deliverable
-`policy/domains/*/` with documented, configurable policy templates.
+Lean proofs that typecheck for meta-properties of the policy system.
 
 ---
 
-## Phase 7: CI/CD Pipeline
+## Phase 6: CI/CD Pipeline
 
 **Goal**: Automated verification on every change.
 
 ### Tasks
 
+- [ ] GitHub Actions workflow: CUE validation + golden tests on PR
+- [ ] GitHub Actions workflow: Go tests + lint + benchmark
 - [ ] GitHub Actions workflow: Lean proof check on PR
-- [ ] GitHub Actions workflow: CUE policy validation on PR
-- [ ] GitHub Actions workflow: Go tests + lint
-- [ ] GitHub Actions workflow: cue2lean generation + proof check
-- [ ] Badge: "Proofs Passing" in README
+- [ ] GitHub Actions workflow: JSON Schema generation + drift detection
+- [ ] Nix-based CI (reproducible builds via `flake.nix`)
+- [ ] Badge: "Tests Passing" + "Proofs Verified" in README
 
 ### Deliverable
 `.github/workflows/` with complete CI pipeline.
@@ -171,13 +161,15 @@ Running gRPC server (`middleware/cmd/server`) with `Validate` and `ReloadPolicie
 
 End-to-end demo for the browser domain:
 
-1. JSON Schema for browser actions → constrained decoding
-2. CUE policy: URL whitelist + forbidden selector list
-3. Go gRPC server validates browser actions
-4. Lean proof: "only whitelisted URLs reachable"
-5. Integration with Playwright MCP for live demo
+1. CUE defines browser action schema + URL whitelist policy
+2. JSON Schema derived from CUE → constrained decoding
+3. Go library validates browser actions against CUE policy
+4. gRPC server wraps the library for remote use
+5. Golden tests prove policy correctness for known cases
+6. Lean proves browser policy is consistent and complete
 
 **Success criteria**:
-- LLM cannot generate a `navigate` action to a non-whitelisted URL (structural guarantee)
+- LLM cannot generate a `navigate` action to a non-whitelisted URL (structural guarantee via derived JSON Schema)
 - If it somehow does, CUE validator rejects it and triggers re-prompt (semantic guarantee)
-- Lean proves the URL whitelist policy is consistent and safe (formal guarantee)
+- Lean proves the browser policy set is consistent and has no gaps (meta-level guarantee)
+- All of the above verified by `make test` and `make lean-build`

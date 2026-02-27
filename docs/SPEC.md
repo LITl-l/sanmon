@@ -5,41 +5,60 @@
 - LLM internals (weights, attention) cannot be formalized.
 - Instead, formalize the **output surface**: structure it, constrain it, prove properties about the constraints.
 - Constrained decoding is the bridge between the probabilistic world and the deterministic world.
+- **Single source of truth**: CUE defines both structure and policy. All other representations (JSON Schema, validation logic) are derived from CUE.
 
 ## 2. Architecture
 
-### 2.1 Runtime Path (per request, latency-critical)
+### 2.1 The Three Gates (三門)
+
+The three gates operate at different times but share a single source of truth (CUE):
+
+| Gate | Timing | Purpose | Technology |
+|---|---|---|---|
+| **第一門 (Structure)** | Generation-time | Force LLM output to conform to JSON Schema | CUE → JSON Schema → Constrained Decoding |
+| **第二門 (Policy)** | Runtime | Validate action against business rules and safety policies | CUE runtime validation (Go) |
+| **第三門 (Proof)** | CI-time | Prove meta-properties of the policy system | Lean 4 |
+
+### 2.2 Runtime Path (per request, latency-critical)
 
 ```
 LLM Provider (Bedrock / OpenAI / self-hosted)
-  │ constrained decoding (JSON Schema)
+  │ constrained decoding (JSON Schema derived from CUE)
   ▼
 Structured Action (JSON)
   │
   ▼
-CUE Validation Engine (Go runtime, gRPC/HTTP)
+sanmon-core (Go library, in-process)
+  │ CUE runtime validation
   │
   ├── PASS → Execute action
   └── FAIL → Re-prompt LLM with violation reason (up to N retries)
 ```
 
-### 2.2 Offline Path (CI/CD, correctness-critical)
+### 2.3 Offline Path (CI/CD, correctness-critical)
 
 ```
 CUE Policy files (*.cue)
   │
-  ▼
-cue2lean: CUE → Lean Theorem Generator
+  ├─► cue export --out jsonschema → JSON Schema (第一門 artifact)
   │
-  ▼
-Lean 4 Proof Checker
-  → "This policy set is safe" (proven)
+  └─► Lean 4 meta-proofs
+        → "Policy composition is consistent" (proven)
+        → "Gate monotonicity holds" (proven)
+        → "All action types have policies defined" (proven)
 ```
 
-## 3. Layer 0: Constrained Decoding
+## 3. Gate 1: Constrained Decoding (第一門)
 
 ### Purpose
 Force LLM outputs to conform to a JSON Schema at token generation time. This is not post-hoc validation — it modifies the sampling distribution to make invalid tokens impossible.
+
+### Source
+JSON Schema is **derived from CUE**, not maintained separately. CUE is the single source of truth for both structure and semantics.
+
+```
+policy/**/*.cue  →  cue export --out openapi  →  JSON Schema
+```
 
 ### Technologies
 - AWS Bedrock Structured Outputs
@@ -56,7 +75,7 @@ Force LLM outputs to conform to a JSON Schema at token generation time. This is 
 - Business rule compliance
 - Safety properties
 
-## 4. Layer 1: CUE Validator
+## 4. Gate 2: CUE Validator (第二門)
 
 ### Purpose
 Validate the semantic content of structurally valid actions against configurable policies.
@@ -80,6 +99,28 @@ Every AI agent action is represented as:
     "agent_id": "...",
     "request_id": "..."
   }
+}
+```
+
+### CUE as Single Source of Truth
+
+CUE defines both structural schema and semantic policies in one place:
+
+```cue
+// Structure (feeds into JSON Schema generation)
+#Action: {
+    action_type: #BrowserActionType | #ApiActionType | ...
+    target:      string
+    parameters:  {...}
+    context:     #Context
+    metadata:    #Metadata
+}
+
+// Policy (enforced at runtime)
+#BrowserPolicy: {
+    url_whitelist: [...string]
+    forbidden_selectors: [...string]
+    max_input_length: int | *1000
 }
 ```
 
@@ -119,13 +160,23 @@ policy/
 ### Performance Target
 - CUE validation latency: < 10ms per action
 
-## 5. Layer 2: Lean Prover
+## 5. Gate 3: Lean Prover (第三門)
 
 ### Purpose
-Prove that the CUE policy rule sets are:
-1. **Consistent**: No two rules contradict each other
-2. **Safe**: No sequence of policy-compliant actions can reach a forbidden state
-3. **Complete** (optional): Every intended prohibition is actually enforced
+Prove **meta-properties** of the policy system, not individual rule correctness.
+
+### What Lean proves
+
+| Property | Description |
+|---|---|
+| **Policy consistency** | No two rules in a domain policy set contradict each other |
+| **Gate monotonicity** | Any action passing Gate 2 (CUE) also passes Gate 1 (JSON Schema) |
+| **Policy completeness** | Every action type has at least one applicable policy defined |
+| **Composition safety** | Merging base + domain policies preserves invariants |
+
+### What Lean does NOT prove
+- Individual rule correctness (e.g., "this URL is in the whitelist") — CUE handles this at runtime
+- LLM behavior — outside the formal model entirely
 
 ### Formal Model
 
@@ -140,29 +191,48 @@ inductive ActionType where
 -- State transition
 def step (s : State) (a : Action) : State
 
--- Safety invariant
+-- Core theorem: safe actions preserve safe states
 theorem safe_step_preserves_safety
     (s : State) (a : Action)
     (hs : SafeState s) (ha : SafeAction s a) :
     SafeState (step s a)
 ```
 
-### cue2lean Tool
-- Parses CUE policy files
-- Generates corresponding Lean theorem statements
-- Generated theorems are checked by Lean in CI
-- If a policy change breaks a proof, the CI pipeline fails
-
 ### Execution
 - Lean proofs run only in CI (not at runtime)
 - Proof checking on every policy change (PR gate)
 - Proof artifacts cached for unchanged policies
 
-## 6. Middleware (Runtime Server)
+## 6. Runtime: sanmon-core (Go Library)
 
-### API
+### Architecture
 
-gRPC service with two RPCs:
+```
+sanmon-core (Go library)              ← in-process, <10ms
+  ├── CUE loader + policy compositor
+  ├── Validator (CUE runtime evaluation)
+  ├── JSON Schema exporter
+  └── Structured violation reporter
+
+sanmon-server (thin gRPC wrapper)     ← for cross-language / remote use
+  └── imports sanmon-core
+
+sanmon-sdk (future)                   ← language-specific clients
+  └── gRPC client wrappers
+```
+
+### Library API (Go)
+
+```go
+// Core validation
+type Engine interface {
+    Validate(ctx context.Context, action []byte) (*Result, error)
+    ReloadPolicies(ctx context.Context) error
+    ExportJSONSchema(domain string) ([]byte, error)
+}
+```
+
+### gRPC API
 
 ```protobuf
 service GuardrailsService {
@@ -185,10 +255,10 @@ When validation fails:
 
 ```
 Agent Framework (any)
-  → gRPC client call to sanmon
-    → sanmon validates
-      → PASS: return to agent, agent executes
-      → FAIL: agent re-prompts LLM (or sanmon handles retry)
+  → sanmon-core.Validate(action)       # in-process (preferred)
+  → or gRPC client call to sanmon-server  # remote
+    → PASS: agent executes action
+    → FAIL: agent re-prompts LLM
 ```
 
 ## 7. Domain-Specific Policies
@@ -243,4 +313,4 @@ Agent Framework (any)
 | AWS Cedar + Lean | Authorization policy verification | Static policy, not AI agent runtime constraints |
 | Smart contract verification | Coq/Lean/Isabelle on contract code | Verifies code itself, not AI-generated actions |
 
-sanmon is unique in combining: structured action output (constrained decoding) + rule validation (CUE) + rule soundness proofs (Lean).
+sanmon is unique in combining: single-source CUE definitions + constrained decoding + runtime validation + meta-level formal proofs (Lean).
