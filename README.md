@@ -2,7 +2,7 @@
 
 Three-gate formal verification stack for AI agent actions.
 
-**Constrained Decoding + CUE + Lean** — not probabilistic guardrails, but mathematically proven safety guarantees.
+**CUE + Go + Lean** — not probabilistic guardrails, but mathematically proven safety guarantees.
 
 ## The Problem
 
@@ -10,26 +10,26 @@ AI agents (browser automation, API callers, DB operators, IaC tools) produce act
 
 ## The Approach
 
-Instead of reasoning about LLM internals (impossible), sanmon constrains and verifies **LLM outputs**:
+Instead of reasoning about LLM internals (impossible), sanmon constrains and verifies **LLM outputs** through three gates, all derived from a **single source of truth** (CUE):
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Gate 0: Constrained Decoding (構造的保証)        │
-│  Force LLM output to valid JSON Schema.          │
+│  第一門: Constrained Decoding (構造的保証)        │
+│  JSON Schema derived from CUE.                   │
 │  100% structural correctness at generation time.  │
 ├─────────────────────────────────────────────────┤
-│  Gate 1: CUE Validator (意味的検証)               │
+│  第二門: CUE Validator (意味的検証)               │
 │  Business rules, safety policies, whitelists.     │
 │  Reject violations → re-prompt LLM.              │
 ├─────────────────────────────────────────────────┤
-│  Gate 2: Lean Prover (健全性証明)                 │
-│  Prove the rule set itself is consistent and      │
-│  that no valid input can reach an unsafe state.   │
+│  第三門: Lean Prover (健全性証明)                 │
+│  Prove the policy system is consistent,           │
+│  complete, and compositionally safe.              │
 │  Runs offline in CI.                              │
 └─────────────────────────────────────────────────┘
 ```
 
-Constrained decoding bridges the probabilistic world (LLM) to the deterministic world (formal verification).
+CUE is the single source of truth: structure and policy defined once, JSON Schema derived automatically. Constrained decoding bridges the probabilistic world (LLM) to the deterministic world (formal verification).
 
 ## Quick Start
 
@@ -40,40 +40,35 @@ direnv allow   # or: nix develop
 
 # Verify toolchain
 make policy-check   # Validate CUE policies
-make schema         # Generate JSON Schema from TypeScript
+make schema         # Generate JSON Schema from CUE
 make proto          # Generate gRPC Go code
 make lean-build     # Build Lean proofs
+make test           # Run golden test suite
 ```
 
 ## Project Structure
 
 ```
 sanmon/
-├── schema/            # Gate 0: Action types (TypeScript → JSON Schema)
-│   └── src/
-│       ├── actions.ts     # Zod type definitions
-│       └── generate.ts    # JSON Schema generator
-├── policy/            # Gate 1: CUE policy engine
-│   ├── base/              # Base action schema
+├── policy/            # CUE: single source of truth (schema + policy)
+│   ├── base/              # Base action schema (all domains)
 │   └── domains/           # Domain-specific policies
 │       ├── browser/       # Playwright / browser automation
 │       ├── api/           # MCP / function calling
 │       ├── database/      # SQL / DB operations
 │       └── iac/           # Infrastructure-as-code
-├── prover/            # Gate 2: Lean 4 formal proofs
+├── testdata/          # Golden test suite (valid/invalid per domain)
+├── middleware/         # Go: sanmon-core library + gRPC server
+│   ├── pkg/sanmon/        # Core validation library (in-process)
+│   ├── cmd/server/        # Thin gRPC wrapper
+│   ├── internal/retry/    # Re-prompt loop
+│   └── proto/             # Protobuf definitions
+├── prover/            # Lean 4: meta-proofs
 │   └── VerifiedGuardrails/
 │       ├── Action.lean    # Action model (inductive types)
 │       ├── Safety.lean    # Safety properties & theorems
-│       └── Policy.lean    # CUE policy formalization
-├── middleware/         # Runtime: Go gRPC validation server
-│   ├── cmd/server/
-│   ├── internal/
-│   │   ├── validator/     # CUE runtime integration
-│   │   └── retry/         # Re-prompt loop
-│   ├── pkg/client/        # Go client library
-│   └── proto/             # Protobuf definitions
-├── tools/cue2lean/    # CUE → Lean theorem generator
-├── ci/                # GitHub Actions (Lean proof CI)
+│       └── Policy.lean    # Meta-property proofs
+├── generated/         # Derived artifacts (JSON Schema, gRPC code)
 └── docs/              # Specifications & architecture
 ```
 
@@ -81,12 +76,19 @@ sanmon/
 
 | Component | Technology | Rationale |
 |---|---|---|
-| Runtime | Go | Native CUE support, low latency |
-| Policy | CUE | Purpose-built for data constraints, JSON/YAML interop |
+| Schema + Policy | CUE | Single source of truth for structure and constraints |
+| Runtime | Go | Native CUE support, low latency, library-first design |
 | Proofs | Lean 4 | Modern theorem prover, active ecosystem, AI affinity |
-| Schema | TypeScript + Zod | JSON Schema generation, developer familiarity |
-| API | gRPC + REST | Framework-agnostic integration |
-| CI | GitHub Actions | Automated Lean proof checking |
+| API | gRPC (+ optional REST) | Framework-agnostic integration |
+| CI | GitHub Actions + Nix | Reproducible, automated verification |
+
+## The Three Gates
+
+| Gate | Timing | What it does | Technology |
+|---|---|---|---|
+| **第一門** (Structure) | Generation-time | Force valid JSON structure via constrained decoding | CUE → JSON Schema |
+| **第二門** (Policy) | Runtime | Validate business rules and safety policies | CUE runtime (Go) |
+| **第三門** (Proof) | CI-time | Prove policy system meta-properties | Lean 4 |
 
 ## Domains
 
