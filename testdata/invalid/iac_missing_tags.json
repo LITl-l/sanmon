@@ -1,0 +1,21 @@
+{
+  "action_type": "create",
+  "target": "aws_s3_bucket.untagged",
+  "parameters": {
+    "resource_type": "aws_s3_bucket",
+    "properties": {
+      "bucket": "untagged-bucket"
+    }
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-bad-008",
+    "domain": "iac"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T13:00:00Z",
+    "agent_id": "agent-evil",
+    "request_id": "req-bad-008"
+  },
+  "_expected_violations": ["missing_required_tags"]
+}

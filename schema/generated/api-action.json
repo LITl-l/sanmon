@@ -1,0 +1,81 @@
+{
+  "$id": "https://sanmon.dev/schemas/api-action.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Schema for API/MCP agent actions",
+  "properties": {
+    "action_type": {
+      "enum": [
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete"
+      ],
+      "type": "string"
+    },
+    "context": {
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "domain": {
+          "enum": [
+            "browser",
+            "api",
+            "database",
+            "iac"
+          ],
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "authenticated",
+        "session_id",
+        "domain"
+      ],
+      "type": "object"
+    },
+    "metadata": {
+      "properties": {
+        "agent_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "agent_id",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "target": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "action_type",
+    "target",
+    "parameters",
+    "context",
+    "metadata"
+  ],
+  "title": "API Action",
+  "type": "object"
+}

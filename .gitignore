@@ -5,6 +5,7 @@ result
 # Go
 .go/
 vendor/
+bin/
 
 # Node
 node_modules/

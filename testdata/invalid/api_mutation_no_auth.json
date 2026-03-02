@@ -1,0 +1,23 @@
+{
+  "action_type": "post",
+  "target": "https://api.example.com/users",
+  "parameters": {
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "name": "Alice"
+    }
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-bad-004",
+    "domain": "api"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T11:00:00Z",
+    "agent_id": "agent-evil",
+    "request_id": "req-bad-004"
+  },
+  "_expected_violations": ["mutation_without_auth_header"]
+}

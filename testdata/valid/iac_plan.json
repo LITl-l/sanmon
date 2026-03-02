@@ -1,0 +1,26 @@
+{
+  "action_type": "plan",
+  "target": "aws_s3_bucket.data",
+  "parameters": {
+    "resource_type": "aws_s3_bucket",
+    "properties": {
+      "bucket": "my-data-bucket",
+      "acl": "private"
+    },
+    "tags": {
+      "owner": "team-platform",
+      "environment": "staging",
+      "project": "sanmon"
+    }
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-abc-iac",
+    "domain": "iac"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T13:00:00Z",
+    "agent_id": "agent-004",
+    "request_id": "req-030"
+  }
+}

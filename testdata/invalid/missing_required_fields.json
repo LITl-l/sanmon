@@ -1,0 +1,16 @@
+{
+  "action_type": "navigate",
+  "target": "",
+  "parameters": {},
+  "context": {
+    "authenticated": true,
+    "session_id": "",
+    "domain": "browser"
+  },
+  "metadata": {
+    "timestamp": "invalid-timestamp",
+    "agent_id": "",
+    "request_id": ""
+  },
+  "_expected_violations": ["empty_target", "empty_session_id", "invalid_timestamp", "empty_agent_id", "empty_request_id"]
+}

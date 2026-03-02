@@ -1,0 +1,17 @@
+{
+  "action_type": "click",
+  "target": "#submit-button",
+  "parameters": {
+    "selector": "#submit-button"
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-abc-123",
+    "domain": "browser"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T10:01:00Z",
+    "agent_id": "agent-001",
+    "request_id": "req-002"
+  }
+}
