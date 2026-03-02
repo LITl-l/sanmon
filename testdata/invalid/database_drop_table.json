@@ -1,0 +1,16 @@
+{
+  "action_type": "drop_table",
+  "target": "users",
+  "parameters": {},
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-bad-006",
+    "domain": "database"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T12:00:00Z",
+    "agent_id": "agent-evil",
+    "request_id": "req-bad-006"
+  },
+  "_expected_violations": ["drop_table_forbidden"]
+}

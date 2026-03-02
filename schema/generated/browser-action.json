@@ -1,0 +1,83 @@
+{
+  "$id": "https://sanmon.dev/schemas/browser-action.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Schema for browser automation agent actions (Playwright, Browser Use)",
+  "properties": {
+    "action_type": {
+      "enum": [
+        "navigate",
+        "click",
+        "fill",
+        "select",
+        "scroll",
+        "wait",
+        "screenshot"
+      ],
+      "type": "string"
+    },
+    "context": {
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "domain": {
+          "enum": [
+            "browser",
+            "api",
+            "database",
+            "iac"
+          ],
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "authenticated",
+        "session_id",
+        "domain"
+      ],
+      "type": "object"
+    },
+    "metadata": {
+      "properties": {
+        "agent_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "agent_id",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "target": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "action_type",
+    "target",
+    "parameters",
+    "context",
+    "metadata"
+  ],
+  "title": "Browser Action",
+  "type": "object"
+}

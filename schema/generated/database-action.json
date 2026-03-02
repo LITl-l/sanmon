@@ -1,0 +1,82 @@
+{
+  "$id": "https://sanmon.dev/schemas/database-action.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Schema for SQL/database agent actions",
+  "properties": {
+    "action_type": {
+      "enum": [
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "create_table",
+        "drop_table"
+      ],
+      "type": "string"
+    },
+    "context": {
+      "properties": {
+        "authenticated": {
+          "type": "boolean"
+        },
+        "domain": {
+          "enum": [
+            "browser",
+            "api",
+            "database",
+            "iac"
+          ],
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "authenticated",
+        "session_id",
+        "domain"
+      ],
+      "type": "object"
+    },
+    "metadata": {
+      "properties": {
+        "agent_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "agent_id",
+        "request_id"
+      ],
+      "type": "object"
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "target": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "action_type",
+    "target",
+    "parameters",
+    "context",
+    "metadata"
+  ],
+  "title": "Database Action",
+  "type": "object"
+}

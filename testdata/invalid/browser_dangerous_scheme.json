@@ -1,0 +1,18 @@
+{
+  "action_type": "navigate",
+  "target": "javascript:alert('xss')",
+  "parameters": {
+    "url": "javascript:alert('xss')"
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-bad-001",
+    "domain": "browser"
+  },
+  "metadata": {
+    "timestamp": "2026-03-01T10:00:00Z",
+    "agent_id": "agent-evil",
+    "request_id": "req-bad-001"
+  },
+  "_expected_violations": ["dangerous_scheme"]
+}

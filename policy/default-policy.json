@@ -1,0 +1,32 @@
+{
+  "browser": {
+    "allowed_url_patterns": ["*.example.com"],
+    "forbidden_selectors": [
+      "[data-testid='delete-all']",
+      "[data-testid='admin-reset']",
+      ".danger-zone button"
+    ],
+    "max_input_length": 1000,
+    "no_dangerous_schemes": true
+  },
+  "api": {
+    "allowed_endpoints": [],
+    "method_restrictions": {},
+    "require_auth_for_mutations": true
+  },
+  "database": {
+    "read_only_tables": [],
+    "no_delete_tables": [],
+    "sensitive_columns": [],
+    "require_where_for_mutations": true,
+    "allow_drop_table": false,
+    "max_join_depth": 3
+  },
+  "iac": {
+    "allowed_resource_types": [],
+    "required_tags": ["owner", "environment", "project"],
+    "allow_destroy": false,
+    "block_open_ingress": true,
+    "allow_plan": true
+  }
+}
