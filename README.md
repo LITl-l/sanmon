@@ -39,11 +39,11 @@ cd sanmon
 direnv allow   # or: nix develop
 
 # Verify toolchain
-make policy-check   # Validate CUE policies
-make schema         # Generate JSON Schema from CUE
-make proto          # Generate gRPC Go code
-make lean-build     # Build Lean proofs
-make test           # Run golden test suite
+just policy-check   # Validate CUE policies
+just schema         # Generate JSON Schema from CUE
+just proto          # Generate gRPC Go code
+just lean-build     # Build Lean proofs
+just test           # Run golden test suite
 ```
 
 ## Project Structure

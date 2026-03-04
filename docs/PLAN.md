@@ -35,7 +35,7 @@
 ### Deliverable
 - CUE as sole schema+policy definition
 - `testdata/` golden test suite
-- `make schema` generates JSON Schema from CUE
+- `just schema` generates JSON Schema from CUE
 
 ---
 
@@ -61,7 +61,7 @@
   - [ ] Violation messages are actionable
 - [ ] Policy hot-reload (watch filesystem, atomic swap)
 - [ ] Benchmark: confirm < 10ms validation latency
-- [ ] `make test` runs full golden suite
+- [ ] `just test` runs full golden suite
 
 ### Deliverable
 Go package `middleware/pkg/sanmon` — importable library for in-process validation.
@@ -75,7 +75,7 @@ Go package `middleware/pkg/sanmon` — importable library for in-process validat
 ### Tasks
 
 - [x] Define protobuf service (`middleware/proto/guardrails.proto`)
-- [ ] Generate Go gRPC code (`make proto`)
+- [ ] Generate Go gRPC code (`just proto`)
 - [ ] Implement gRPC server (`middleware/cmd/server/`)
   - [ ] Wire `Validate` RPC to sanmon-core Engine
   - [ ] Wire `ReloadPolicies` RPC
@@ -100,7 +100,7 @@ Running gRPC server (`middleware/cmd/server`) importing `sanmon-core`.
 
 ### Tasks
 
-- [ ] `make schema` target: `cue export` → `generated/action-schema.json`
+- [ ] `just schema` target: `cue export` → `generated/action-schema.json`
 - [ ] Per-domain schema export (browser-only, api-only, etc.)
 - [ ] Schema versioning (embed git hash or semver)
 - [ ] Validate generated schema against OpenAPI 3.0 spec
@@ -172,4 +172,4 @@ End-to-end demo for the browser domain:
 - LLM cannot generate a `navigate` action to a non-whitelisted URL (structural guarantee via derived JSON Schema)
 - If it somehow does, CUE validator rejects it and triggers re-prompt (semantic guarantee)
 - Lean proves the browser policy set is consistent and has no gaps (meta-level guarantee)
-- All of the above verified by `make test` and `make lean-build`
+- All of the above verified by `just test` and `just lean-build`
