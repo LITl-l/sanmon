@@ -40,7 +40,7 @@
             grpcurl
 
             # ── Build & utility ──
-            gnumake
+            just
             jq
             yq-go
             git
