@@ -90,6 +90,6 @@ docs-install:
 
 clean:
     rm -rf bin/
-    rm -rf schema/dist schema/generated schema/node_modules
+    rm -rf schema/generated
     rm -rf middleware/proto/guardrailsv1
     cd prover && lake clean 2>/dev/null || true

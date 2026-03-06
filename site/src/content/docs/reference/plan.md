@@ -20,10 +20,10 @@ description: Phased roadmap for sanmon development.
 
 - [x] Define base action schema in CUE (`policy/base/action.cue`)
 - [x] Define domain-specific policies (browser, API, database, IaC)
-- [ ] Consolidate structural schema into CUE (eliminate separate TypeScript/Zod layer)
+- [x] Consolidate structural schema into CUE (eliminate separate TypeScript/Zod layer)
 - [ ] Build golden test suite (per-domain valid/invalid JSON fixtures)
 - [ ] `cue vet` passes for all valid cases, fails for all invalid cases
-- [ ] Remove `schema/` TypeScript directory (no longer needed)
+- [x] Remove `schema/` TypeScript directory (no longer needed)
 
 ### Deliverable
 CUE as sole schema+policy definition with `testdata/` golden test suite.

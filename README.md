@@ -68,7 +68,8 @@ sanmon/
 │       ├── Action.lean    # Action model (inductive types)
 │       ├── Safety.lean    # Safety properties & theorems
 │       └── Policy.lean    # Meta-property proofs
-├── generated/         # Derived artifacts (JSON Schema, gRPC code)
+├── schema/generated/  # Derived JSON Schema (from Go CLI)
+├── site/              # Documentation site (Astro Starlight)
 └── docs/              # Specifications & architecture
 ```
 

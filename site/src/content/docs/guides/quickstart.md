@@ -75,7 +75,8 @@ sanmon/
 │   ├── cmd/sanmon/        # CLI tool
 │   └── cmd/server/        # HTTP validation server
 ├── prover/            # Lean 4: meta-proofs
-├── schema/            # Generated JSON Schemas
+├── schema/generated/  # Derived JSON Schema (from Go CLI)
+├── site/              # Documentation site (Astro Starlight)
 └── docs/              # Specifications & architecture
 ```
 
