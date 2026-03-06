@@ -9,6 +9,11 @@ export default defineConfig({
       title: "sanmon (三門)",
       description:
         "Three-gate formal verification stack for AI agent actions.",
+      defaultLocale: "en",
+      locales: {
+        en: { label: "English", lang: "en" },
+        ja: { label: "日本語", lang: "ja" },
+      },
       social: [
         {
           icon: "github",
@@ -19,25 +24,28 @@ export default defineConfig({
       sidebar: [
         {
           label: "Getting Started",
+          translations: { ja: "はじめに" },
           items: [
-            { label: "Introduction", slug: "guides/introduction" },
-            { label: "Quick Start", slug: "guides/quickstart" },
+            { label: "Introduction", slug: "guides/introduction", translations: { ja: "概要" } },
+            { label: "Quick Start", slug: "guides/quickstart", translations: { ja: "クイックスタート" } },
           ],
         },
         {
           label: "Architecture",
+          translations: { ja: "アーキテクチャ" },
           items: [
-            { label: "The Three Gates", slug: "guides/three-gates" },
-            { label: "CUE as Source of Truth", slug: "guides/cue-source" },
-            { label: "Domain Policies", slug: "guides/domains" },
+            { label: "The Three Gates", slug: "guides/three-gates", translations: { ja: "三つの門" } },
+            { label: "CUE as Source of Truth", slug: "guides/cue-source", translations: { ja: "CUE：単一の真実の源" } },
+            { label: "Domain Policies", slug: "guides/domains", translations: { ja: "ドメインポリシー" } },
           ],
         },
         {
           label: "Reference",
+          translations: { ja: "リファレンス" },
           items: [
-            { label: "Specification", slug: "reference/spec" },
-            { label: "Implementation Plan", slug: "reference/plan" },
-            { label: "CLI & API", slug: "reference/cli" },
+            { label: "Specification", slug: "reference/spec", translations: { ja: "仕様書" } },
+            { label: "Implementation Plan", slug: "reference/plan", translations: { ja: "実装計画" } },
+            { label: "CLI & API", slug: "reference/cli", translations: { ja: "CLI・API" } },
           ],
         },
       ],
