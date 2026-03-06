@@ -1,0 +1,44 @@
+---
+title: sanmon (三門)
+description: Three-gate formal verification stack for AI agent actions.
+template: splash
+hero:
+  tagline: "CUE + Go + Lean — not probabilistic guardrails, but mathematically proven safety guarantees."
+  actions:
+    - text: Get Started
+      link: /sanmon/guides/introduction/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/LITl-l/sanmon
+      variant: minimal
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## The Three Gates
+
+<CardGrid>
+  <Card title="第一門 — Structure" icon="seti:json">
+    Constrained decoding via JSON Schema derived from CUE. 100% structural
+    correctness at generation time.
+  </Card>
+  <Card title="第二門 — Policy" icon="approve-check">
+    CUE-based semantic validation. Business rules, safety policies, whitelists.
+    Reject violations and re-prompt the LLM.
+  </Card>
+  <Card title="第三門 — Proof" icon="star">
+    Lean 4 meta-proofs. Prove the policy system is consistent, complete, and
+    compositionally safe. Runs offline in CI.
+  </Card>
+  <Card title="Four Domains" icon="list-format">
+    Browser automation, API / function calling, database operations, and
+    infrastructure-as-code — each with domain-specific safety policies.
+  </Card>
+</CardGrid>
+
+## Why sanmon?
+
+AI agents produce actions that can be dangerous. Current guardrails rely on probabilistic classifiers or pattern matching — they fail silently and offer no formal guarantees.
+
+Instead of reasoning about LLM internals (impossible), sanmon constrains and verifies **LLM outputs** through three independent gates, all derived from a **single source of truth** written in CUE.

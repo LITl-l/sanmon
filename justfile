@@ -72,6 +72,20 @@ proto:
 lean-build:
     cd prover && lake build
 
+# ── Docs: Starlight documentation site ──
+
+docs-dev:
+    cd site && npm run dev
+
+docs-build:
+    cd site && npm run build
+
+docs-preview:
+    cd site && npm run preview
+
+docs-install:
+    cd site && npm install
+
 # ── Clean ──
 
 clean:
