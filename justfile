@@ -75,16 +75,16 @@ lean-build:
 # ── Docs: Starlight documentation site ──
 
 docs-dev:
-    cd site && npm run dev
+    cd site && bun run dev
 
 docs-build:
-    cd site && npm run build
+    cd site && bun run build
 
 docs-preview:
-    cd site && npm run preview
+    cd site && bun run preview
 
 docs-install:
-    cd site && npm install
+    cd site && bun install
 
 # ── Clean ──
 
