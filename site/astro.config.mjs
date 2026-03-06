@@ -26,7 +26,7 @@ export default defineConfig({
           label: "Getting Started",
           translations: { ja: "はじめに" },
           items: [
-            { label: "Introduction", slug: "guides/introduction", translations: { ja: "概要" } },
+            { label: "Introduction", slug: "guides/introduction", translations: { ja: "sanmon とは" } },
             { label: "Quick Start", slug: "guides/quickstart", translations: { ja: "クイックスタート" } },
           ],
         },
@@ -35,7 +35,7 @@ export default defineConfig({
           translations: { ja: "アーキテクチャ" },
           items: [
             { label: "The Three Gates", slug: "guides/three-gates", translations: { ja: "三つの門" } },
-            { label: "CUE as Source of Truth", slug: "guides/cue-source", translations: { ja: "CUE：単一の真実の源" } },
+            { label: "CUE as Source of Truth", slug: "guides/cue-source", translations: { ja: "CUE による一元管理" } },
             { label: "Domain Policies", slug: "guides/domains", translations: { ja: "ドメインポリシー" } },
           ],
         },

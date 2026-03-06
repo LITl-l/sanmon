@@ -1,65 +1,65 @@
 ---
-title: CLI・APIリファレンス
-description: sanmon CLIツールとHTTPサーバーAPIのリファレンス
+title: CLI・API リファレンス
+description: sanmon CLI と HTTP サーバー API のリファレンス
 ---
 
-## CLI：`sanmon`
+## CLI: `sanmon`
 
-`sanmon` CLIはアクションの検証、スキーマのエクスポート、ポリシーの確認を行います。
+`sanmon` CLI では、アクションの検証、スキーマのエクスポート、ポリシーの確認ができます。
 
 ### `sanmon validate`
 
-単一のアクションまたはアクションのディレクトリを検証します。
+アクションを 1 件ずつ、またはディレクトリ単位で検証します。
 
 ```bash
 # 単一ファイルを検証
 sanmon validate --file testdata/valid/browser-navigate.json
 
-# ディレクトリ内のすべてのファイルを検証
+# ディレクトリ内の全ファイルを検証
 sanmon validate --dir testdata/valid/
 ```
 
-**出力**：各アクションのパス/失敗ステータスと違反の詳細。
+**出力**: アクションごとの合否と、違反がある場合はその詳細。
 
 ### `sanmon schema`
 
-特定のドメインのJSON Schemaをエクスポートします。
+指定したドメインの JSON Schema をエクスポートします。
 
 ```bash
-# ブラウザドメインのスキーマをエクスポート
+# ブラウザドメインのスキーマ
 sanmon schema --domain browser
 
-# すべてのドメインのスキーマをエクスポート
+# 他のドメイン
 sanmon schema --domain api
 sanmon schema --domain database
 sanmon schema --domain iac
 ```
 
-**出力**：JSON Schemaを標準出力に出力（必要に応じてファイルにパイプ）。
+**出力**: JSON Schema が標準出力に出力されます。ファイルに保存するにはリダイレクトしてください。
 
 ### `sanmon policy`
 
-現在ロードされているポリシー設定を表示します。
+現在ロードされているポリシーの設定内容を表示します。
 
 ```bash
 sanmon policy
 ```
 
-**出力**：すべてのロード済みドメインポリシーとそのルールのサマリー。
+**出力**: 全ドメインのポリシーとルールの一覧。
 
 ---
 
-## HTTPサーバー：`sanmon-server`
+## HTTP サーバー: `sanmon-server`
 
-HTTPバリデーションサーバーはsanmon-coreをHTTP経由で公開します。
+sanmon-core を HTTP 経由で利用するためのバリデーションサーバーです。
 
-### サーバーの起動
+### 起動方法
 
 ```bash
 sanmon-server --addr :8080 --policy policy/default-policy.json
 ```
 
-またはJust経由：
+Just 経由でも起動できます。
 
 ```bash
 just serve
@@ -67,9 +67,9 @@ just serve
 
 ### `POST /validate`
 
-ロード済みポリシーに対してアクションを検証します。
+ロード済みのポリシーに対してアクションを検証します。
 
-**リクエスト**：
+**リクエスト例**:
 
 ```bash
 curl -X POST http://localhost:8080/validate \
@@ -83,7 +83,7 @@ curl -X POST http://localhost:8080/validate \
   }'
 ```
 
-**レスポンス（パス）**：
+**レスポンス（合格）**:
 
 ```json
 {
@@ -92,7 +92,7 @@ curl -X POST http://localhost:8080/validate \
 }
 ```
 
-**レスポンス（失敗）**：
+**レスポンス（違反あり）**:
 
 ```json
 {
@@ -100,7 +100,7 @@ curl -X POST http://localhost:8080/validate \
   "violations": [
     {
       "rule": "browser.url_whitelist",
-      "message": "URLが許可パターンに含まれていません",
+      "message": "URL が許可パターンに一致しません",
       "severity": "error"
     }
   ]
@@ -109,25 +109,25 @@ curl -X POST http://localhost:8080/validate \
 
 ---
 
-## Goライブラリ：`sanmon-core`
+## Go ライブラリ: `sanmon-core`
 
-インプロセス検証（最低レイテンシ）のためにライブラリをインポートします。
+インプロセスで検証を行うことで、最小のレイテンシを実現します。
 
 ```go
 import "github.com/LITl-l/sanmon/middleware/pkg/sanmon"
 ```
 
-### Engineインターフェース
+### Engine インターフェース
 
 ```go
 type Engine interface {
-    // ロード済みポリシーに対してアクション（JSONバイト列）を検証
+    // アクション（JSON バイト列）をポリシーに照らして検証
     Validate(ctx context.Context, action []byte) (*Result, error)
 
-    // ディスクからポリシーをリロード
+    // ポリシーをディスクから再読み込み
     ReloadPolicies(ctx context.Context) error
 
-    // ドメインのJSON Schemaをエクスポート
+    // 指定ドメインの JSON Schema をエクスポート
     ExportJSONSchema(domain string) ([]byte, error)
 }
 ```
@@ -163,4 +163,4 @@ service GuardrailsService {
 }
 ```
 
-完全なメッセージ定義は`middleware/proto/guardrails.proto`を参照してください。
+メッセージの詳細は `middleware/proto/guardrails.proto` を参照してください。

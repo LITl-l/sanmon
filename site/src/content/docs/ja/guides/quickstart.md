@@ -1,60 +1,60 @@
 ---
 title: クイックスタート
-description: sanmonを数分でセットアップして実行する
+description: sanmon を数分でセットアップして動かす
 ---
 
 ## 前提条件
 
-- [Nix](https://nixos.org/download/)（flakes有効）
-- または手動インストール：Go 1.22+、CUE CLI、Lean 4（elan）、Just
+- [Nix](https://nixos.org/download/)（flakes を有効化済み）
+- Nix を使わない場合: Go 1.22 以上、CUE CLI、Lean 4（elan）、Just を個別にインストール
 
 ## セットアップ
 
 ```bash
 git clone https://github.com/LITl-l/sanmon.git
 cd sanmon
-direnv allow   # または: nix develop
+direnv allow   # または nix develop
 ```
 
 ## ツールチェーンの確認
 
 ```bash
-# CUEポリシーの検証
+# CUE ポリシーの検証
 just policy-check
 
-# CUEからJSON Schemaを生成
+# JSON Schema の生成
 just schema
 
-# gRPC Goコードを生成
+# gRPC の Go コード生成
 just proto
 
-# Lean証明をビルド
+# Lean 証明のビルド
 just lean-build
 
-# ゴールデンテストスイートを実行
+# テストの実行
 just test
 ```
 
-## デモの実行
+## デモを動かす
 
 ```bash
 just demo
 ```
 
-三門検証のフルデモを実行します：
+三門検証のデモが一通り実行されます。
 
-1. すべての**有効な**テストアクションを検証（すべてパスすることを確認）
-2. すべての**無効な**テストアクションを検証（違反の詳細とともにすべて失敗することを確認）
-3. ブラウザドメインのJSON Schemaをエクスポート
-4. 現在のロード済みポリシーを表示
+1. **有効な**テストアクションをすべて検証（すべてパスすることを確認）
+2. **無効な**テストアクションをすべて検証（違反内容とともにすべて失敗することを確認）
+3. ブラウザドメインの JSON Schema をエクスポート
+4. 現在のポリシー設定を表示
 
-## HTTPサーバーの起動
+## HTTP サーバーを起動する
 
 ```bash
 just serve
 ```
 
-`:8080`でバリデーションサーバーが起動します。アクションを送信して検証：
+ポート `:8080` でバリデーションサーバーが立ち上がります。
 
 ```bash
 curl -X POST http://localhost:8080/validate \
@@ -66,30 +66,30 @@ curl -X POST http://localhost:8080/validate \
 
 ```
 sanmon/
-├── policy/            # CUE：単一の真実の源（スキーマ + ポリシー）
-│   ├── base/              # 基本アクションスキーマ（全ドメイン）
+├── policy/            # CUE: スキーマとポリシーの定義元
+│   ├── base/              # 全ドメイン共通のアクションスキーマ
 │   └── domains/           # ドメイン固有のポリシー
-├── testdata/          # ゴールデンテストスイート（ドメインごとの有効/無効）
-├── middleware/         # Go：sanmon-coreライブラリ + gRPCサーバー
+├── testdata/          # ゴールデンテスト（ドメインごとに有効/無効）
+├── middleware/         # Go: sanmon-core ライブラリ + サーバー
 │   ├── pkg/sanmon/        # コアバリデーションライブラリ（インプロセス）
-│   ├── cmd/sanmon/        # CLIツール
-│   └── cmd/server/        # HTTPバリデーションサーバー
-├── prover/            # Lean 4：メタ証明
-├── schema/generated/  # 導出JSON Schema（Go CLIから）
+│   ├── cmd/sanmon/        # CLI ツール
+│   └── cmd/server/        # HTTP バリデーションサーバー
+├── prover/            # Lean 4: メタ証明
+├── schema/generated/  # Go CLI が出力する JSON Schema
 ├── site/              # ドキュメントサイト（Astro Starlight）
-└── docs/              # 仕様とアーキテクチャ
+└── docs/              # 仕様書・設計ドキュメント
 ```
 
-## ビルドコマンド
+## ビルドコマンド一覧
 
-| コマンド | 説明 |
+| コマンド | 内容 |
 |---|---|
-| `just build` | CLIとHTTPサーバーをビルド |
-| `just test` | ゴールデンテストスイートを実行 |
-| `just demo` | エンドツーエンドの検証デモ |
-| `just serve` | HTTPバリデーションサーバーを:8080で起動 |
-| `just policy-check` | CUEポリシーを検証 |
-| `just schema` | CUEからJSON Schemaをエクスポート |
-| `just proto` | gRPC Goコードを生成 |
-| `just lean-build` | Lean 4の証明をビルド |
+| `just build` | CLI と HTTP サーバーをビルド |
+| `just test` | テストを実行 |
+| `just demo` | 三門検証のデモを実行 |
+| `just serve` | HTTP サーバーを :8080 で起動 |
+| `just policy-check` | CUE ポリシーを検証 |
+| `just schema` | JSON Schema をエクスポート |
+| `just proto` | gRPC の Go コードを生成 |
+| `just lean-build` | Lean 4 の証明をビルド |
 | `just clean` | ビルド成果物を削除 |

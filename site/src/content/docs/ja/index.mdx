@@ -1,9 +1,9 @@
 ---
 title: sanmon (三門)
-description: AIエージェントのアクションに対する三門形式検証スタック
+description: AIエージェントの出力を形式的に検証する三段階のスタック
 template: splash
 hero:
-  tagline: "CUE + Go + Lean — 確率的ガードレールではなく、数学的に証明された安全性保証。"
+  tagline: "CUE + Go + Lean 4 で構成。確率的なガードレールに頼らず、数学的に安全性を保証する。"
   actions:
     - text: はじめる
       link: /sanmon/ja/guides/introduction/
@@ -20,21 +20,21 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid>
   <Card title="第一門 — 構造" icon="seti:json">
-    CUEから導出されたJSON Schemaによる制約付きデコーディング。生成時に100%の構造的正確性を保証。
+    CUE から導出した JSON Schema で制約付きデコーディングを行い、生成時点で構造の正しさを 100% 保証する。
   </Card>
   <Card title="第二門 — ポリシー" icon="approve-check">
-    CUEベースの意味的検証。ビジネスルール、安全性ポリシー、ホワイトリスト。違反を検出しLLMに再プロンプト。
+    CUE によるセマンティック検証。ビジネスルールや安全性ポリシーに違反したアクションは拒否し、LLM に再生成を促す。
   </Card>
   <Card title="第三門 — 証明" icon="star">
-    Lean 4によるメタ証明。ポリシーシステムの一貫性、完全性、合成安全性を証明。CIでオフライン実行。
+    Lean 4 によるメタレベルの証明。ポリシー体系の一貫性・完全性・合成時の安全性を数学的に保証する。CI でオフライン実行。
   </Card>
-  <Card title="4つのドメイン" icon="list-format">
-    ブラウザ自動化、API/関数呼び出し、データベース操作、Infrastructure-as-Code — 各ドメイン固有の安全性ポリシー。
+  <Card title="4 つのドメイン" icon="list-format">
+    ブラウザ操作、API 呼び出し、データベース操作、IaC — ドメインごとに専用の安全性ポリシーを定義。
   </Card>
 </CardGrid>
 
-## なぜsanmonなのか？
+## なぜ sanmon か
 
-AIエージェントは危険なアクションを生成する可能性があります。現在のガードレールは確率的分類器やパターンマッチングに依存しており、サイレントに失敗し、形式的な保証を提供しません。
+AI エージェントが生成するアクションには危険が伴う。既存のガードレールは確率的な分類器やパターンマッチに頼っており、見逃しが起きても検知できず、形式的な保証がない。
 
-LLMの内部構造について推論する代わりに（不可能）、sanmonはCUEで記述された**単一の真実の源**から導出される3つの独立した門を通じて、**LLMの出力**を制約し検証します。
+sanmon は LLM の内部（重みやアテンション）を解析するのではなく、**LLM の出力**を 3 つの独立した門で制約・検証する。すべての定義は CUE に一元化されている。
