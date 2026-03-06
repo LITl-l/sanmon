@@ -1,0 +1,40 @@
+---
+title: sanmon (三門)
+description: AIエージェントの出力を形式的に検証する三段階のスタック
+template: splash
+hero:
+  tagline: "CUE + Go + Lean 4 で構成。確率的なガードレールに頼らず、数学的に安全性を保証する。"
+  actions:
+    - text: はじめる
+      link: /sanmon/ja/guides/introduction/
+      icon: right-arrow
+    - text: GitHubで見る
+      link: https://github.com/LITl-l/sanmon
+      variant: minimal
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## 三つの門
+
+<CardGrid>
+  <Card title="第一門 — 構造" icon="seti:json">
+    CUE から導出した JSON Schema で制約付きデコーディングを行い、生成時点で構造の正しさを 100% 保証する。
+  </Card>
+  <Card title="第二門 — ポリシー" icon="approve-check">
+    CUE によるセマンティック検証。ビジネスルールや安全性ポリシーに違反したアクションは拒否し、LLM に再生成を促す。
+  </Card>
+  <Card title="第三門 — 証明" icon="star">
+    Lean 4 によるメタレベルの証明。ポリシー体系の一貫性・完全性・合成時の安全性を数学的に保証する。CI でオフライン実行。
+  </Card>
+  <Card title="4 つのドメイン" icon="list-format">
+    ブラウザ操作、API 呼び出し、データベース操作、IaC — ドメインごとに専用の安全性ポリシーを定義。
+  </Card>
+</CardGrid>
+
+## なぜ sanmon か
+
+AI エージェントが生成するアクションには危険が伴う。既存のガードレールは確率的な分類器やパターンマッチに頼っており、見逃しが起きても検知できず、形式的な保証がない。
+
+sanmon は LLM の内部（重みやアテンション）を解析するのではなく、**LLM の出力**を 3 つの独立した門で制約・検証する。すべての定義は CUE に一元化されている。

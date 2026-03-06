@@ -17,9 +17,9 @@
 
 - [x] Define base action schema in CUE (`policy/base/action.cue`)
 - [x] Define domain-specific policies (browser, API, database, IaC)
-- [ ] Consolidate structural schema into CUE (eliminate separate TypeScript/Zod layer)
-  - [ ] Move action type definitions from `schema/src/actions.ts` into CUE
-  - [ ] Verify CUE schema can express all current Zod constraints
+- [x] Consolidate structural schema into CUE (eliminate separate TypeScript/Zod layer)
+  - [x] Move action type definitions from `schema/src/actions.ts` into CUE
+  - [x] Verify CUE schema can express all current Zod constraints
   - [ ] Generate JSON Schema from CUE (`cue export --out openapi`)
   - [ ] Validate generated JSON Schema works with constrained decoding engines
 - [ ] Build golden test suite
@@ -30,7 +30,7 @@
   - [ ] `testdata/iac/valid/*.json` / `testdata/iac/invalid/*.json`
   - [ ] Each invalid case annotated with expected violation rule + message
 - [ ] `cue vet` passes for all valid cases, fails for all invalid cases
-- [ ] Remove `schema/` TypeScript directory (no longer needed)
+- [x] Remove `schema/` TypeScript directory (no longer needed)
 
 ### Deliverable
 - CUE as sole schema+policy definition

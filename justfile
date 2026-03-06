@@ -72,10 +72,24 @@ proto:
 lean-build:
     cd prover && lake build
 
+# ── Docs: Starlight documentation site ──
+
+docs-dev:
+    cd site && bun run dev
+
+docs-build:
+    cd site && bun run build
+
+docs-preview:
+    cd site && bun run preview
+
+docs-install:
+    cd site && bun install
+
 # ── Clean ──
 
 clean:
     rm -rf bin/
-    rm -rf schema/dist schema/generated schema/node_modules
+    rm -rf schema/generated
     rm -rf middleware/proto/guardrailsv1
     cd prover && lake clean 2>/dev/null || true
