@@ -1,0 +1,26 @@
+{
+  "action_type": "approve",
+  "target": "DOC-2024-010",
+  "parameters": {
+    "document": {
+      "id": "DOC-2024-010",
+      "title": "新オフィスビル建設",
+      "amount": 2000000,
+      "department": "facilities",
+      "category": "facility_construction",
+      "applicant": "鈴木三郎",
+      "submitted_date": "2026-03-10"
+    },
+    "reason": "Attempting to auto-approve a very large request"
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-backoffice-001",
+    "domain": "approval"
+  },
+  "metadata": {
+    "timestamp": "2026-03-12T10:03:00Z",
+    "agent_id": "chrome-mcp-agent",
+    "request_id": "req-approval-004"
+  }
+}

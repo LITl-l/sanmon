@@ -51,7 +51,15 @@ schema: build-cli
     @./bin/sanmon schema --domain api      > schema/generated/api-action.json
     @./bin/sanmon schema --domain database > schema/generated/database-action.json
     @./bin/sanmon schema --domain iac      > schema/generated/iac-action.json
+    @./bin/sanmon schema --domain approval > schema/generated/approval-action.json
     @echo "JSON Schemas exported to schema/generated/"
+
+# ── Demo: backoffice approval mock app ──
+
+demo-backoffice:
+    @echo "バックオフィス承認デモアプリを起動中..."
+    @echo "http://localhost:3000 でアクセスしてください"
+    python3 -m http.server 3000 -d demo/backoffice/
 
 # ── Validate CUE policies (requires cue CLI) ──
 

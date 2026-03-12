@@ -144,6 +144,7 @@ func (s *server) handleSchema(w http.ResponseWriter, r *http.Request) {
 		"api":      apiSchema(),
 		"database": databaseSchema(),
 		"iac":      iacSchema(),
+		"approval": approvalSchema(),
 	}
 
 	domain := r.URL.Query().Get("domain")
@@ -245,4 +246,33 @@ func iacSchema() map[string]interface{} {
 	return makeSchema("iac", "IaC Action",
 		"Schema for infrastructure-as-code agent actions",
 		[]string{"create", "modify", "destroy", "plan", "apply"})
+}
+
+func approvalSchema() map[string]interface{} {
+	schema := makeSchema("approval", "Approval Action",
+		"Schema for document approval workflow actions",
+		[]string{"approve", "reject"})
+	// Add document sub-schema to parameters
+	props := schema["properties"].(map[string]interface{})
+	props["parameters"] = map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"document": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id":             map[string]interface{}{"type": "string", "minLength": 1},
+					"title":          map[string]interface{}{"type": "string"},
+					"amount":         map[string]interface{}{"type": "number"},
+					"department":     map[string]interface{}{"type": "string"},
+					"category":       map[string]interface{}{"type": "string"},
+					"applicant":      map[string]interface{}{"type": "string"},
+					"submitted_date": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"id", "amount"},
+			},
+			"reason": map[string]interface{}{"type": "string"},
+		},
+		"required": []string{"document"},
+	}
+	return schema
 }

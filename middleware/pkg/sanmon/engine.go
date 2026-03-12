@@ -95,6 +95,8 @@ func (e *Engine) validatePolicy(a *Action, p *Policy) []Violation {
 		return validateDatabase(a, &p.Database)
 	case "iac":
 		return validateIaC(a, &p.IaC)
+	case "approval":
+		return validateApproval(a, &p.Approval)
 	default:
 		return []Violation{{
 			Rule: "unknown_domain", Message: "unknown domain: " + a.Context.Domain,

@@ -32,6 +32,7 @@ var ValidDomains = map[string]bool{
 	"api":      true,
 	"database": true,
 	"iac":      true,
+	"approval": true,
 }
 
 // ValidActionTypes maps each domain to its allowed action types.
@@ -50,6 +51,9 @@ var ValidActionTypes = map[string]map[string]bool{
 	"iac": {
 		"create": true, "modify": true, "destroy": true, "plan": true, "apply": true,
 	},
+	"approval": {
+		"approve": true, "reject": true,
+	},
 }
 
 // validateStructure checks the base schema requirements (Gate 1).
@@ -65,7 +69,7 @@ func validateStructure(a *Action) []Violation {
 
 	if !ValidDomains[a.Context.Domain] {
 		violations = append(violations, Violation{
-			Rule: "valid_domain", Message: "domain must be one of: browser, api, database, iac",
+			Rule: "valid_domain", Message: "domain must be one of: browser, api, database, iac, approval",
 			Path: "context.domain", Severity: SeverityError,
 		})
 	}
