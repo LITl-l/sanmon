@@ -12,6 +12,27 @@ type Policy struct {
 	API      APIPolicy      `json:"api"`
 	Database DatabasePolicy `json:"database"`
 	IaC      IaCPolicy      `json:"iac"`
+	Approval ApprovalPolicy `json:"approval"`
+}
+
+// ApprovalPolicy defines rules for document approval workflows.
+// Rules are evaluated top-to-bottom; the first matching rule determines the expected decision.
+type ApprovalPolicy struct {
+	Rules []ApprovalRule `json:"rules"`
+}
+
+// ApprovalRule is a single approval policy rule.
+type ApprovalRule struct {
+	Name       string              `json:"name"`
+	Decision   string              `json:"decision"` // "approve", "reject", "manual_review"
+	Conditions []ApprovalCondition `json:"conditions"`
+}
+
+// ApprovalCondition is a predicate on a document field.
+type ApprovalCondition struct {
+	Field    string      `json:"field"`    // document field name (e.g., "amount", "department")
+	Operator string      `json:"operator"` // "lt", "gt", "lte", "gte", "eq", "neq", "in", "not_in"
+	Value    interface{} `json:"value"`    // number, string, or []string
 }
 
 // BrowserPolicy defines constraints for browser automation agents.
@@ -80,6 +101,38 @@ func DefaultPolicy() *Policy {
 			AllowDestroy:         false,
 			BlockOpenIngress:     true,
 			AllowPlan:            true,
+		},
+		Approval: ApprovalPolicy{
+			Rules: []ApprovalRule{
+				{
+					Name:     "auto_approve_small_opex",
+					Decision: "approve",
+					Conditions: []ApprovalCondition{
+						{Field: "amount", Operator: "lt", Value: float64(100000)},
+						{Field: "category", Operator: "eq", Value: "operational_expenditure"},
+					},
+				},
+				{
+					Name:     "reject_large_capex",
+					Decision: "reject",
+					Conditions: []ApprovalCondition{
+						{Field: "amount", Operator: "gt", Value: float64(500000)},
+						{Field: "category", Operator: "eq", Value: "capital_expenditure"},
+					},
+				},
+				{
+					Name:     "manual_review_very_large",
+					Decision: "manual_review",
+					Conditions: []ApprovalCondition{
+						{Field: "amount", Operator: "gt", Value: float64(1000000)},
+					},
+				},
+				{
+					Name:       "default_reject",
+					Decision:   "reject",
+					Conditions: []ApprovalCondition{},
+				},
+			},
 		},
 	}
 }

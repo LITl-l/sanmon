@@ -202,7 +202,7 @@ func runSchema(args []string) {
 }
 
 func domainNames() []string {
-	return []string{"browser", "api", "database", "iac"}
+	return []string{"browser", "api", "database", "iac", "approval"}
 }
 
 func generateSchemas() map[string]interface{} {
@@ -293,6 +293,42 @@ func generateSchemas() map[string]interface{} {
 			"action_type": map[string]interface{}{
 				"type": "string",
 				"enum": []string{"create", "modify", "destroy", "plan", "apply"},
+			},
+		}),
+		"required": baseRequired,
+	}
+
+	// Approval
+	schemas["approval"] = map[string]interface{}{
+		"$schema":     "https://json-schema.org/draft/2020-12/schema",
+		"$id":         "https://sanmon.dev/schemas/approval-action.json",
+		"title":       "Approval Action",
+		"description": "Schema for document approval workflow actions",
+		"type":        "object",
+		"properties": mergeProps(baseProps, map[string]interface{}{
+			"action_type": map[string]interface{}{
+				"type": "string",
+				"enum": []string{"approve", "reject"},
+			},
+			"parameters": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"document": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"id":             map[string]interface{}{"type": "string", "minLength": 1},
+							"title":          map[string]interface{}{"type": "string"},
+							"amount":         map[string]interface{}{"type": "number"},
+							"department":     map[string]interface{}{"type": "string"},
+							"category":       map[string]interface{}{"type": "string"},
+							"applicant":      map[string]interface{}{"type": "string"},
+							"submitted_date": map[string]interface{}{"type": "string"},
+						},
+						"required": []string{"id", "amount"},
+					},
+					"reason": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"document"},
 			},
 		}),
 		"required": baseRequired,

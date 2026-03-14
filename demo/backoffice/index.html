@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>承認管理システム — バックオフィス</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Hiragino Sans", "Noto Sans JP", sans-serif; background: #f5f5f5; color: #333; }
+  .header { background: #1a365d; color: #fff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .user { font-size: 13px; opacity: 0.8; }
+  .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #fff; border-radius: 8px; padding: 16px 20px; flex: 1; border-left: 4px solid; }
+  .stat-card.pending { border-color: #e69500; }
+  .stat-card.approved { border-color: #38a169; }
+  .stat-card.rejected { border-color: #e53e3e; }
+  .stat-card .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; }
+  table { width: 100%; background: #fff; border-radius: 8px; overflow: hidden; border-collapse: collapse; }
+  th { background: #edf2f7; text-align: left; padding: 10px 14px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 14px; }
+  tr:hover { background: #f7fafc; }
+  .amount { font-variant-numeric: tabular-nums; text-align: right; }
+  .status { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .status.pending { background: #fef3cd; color: #856404; }
+  .status.approved { background: #d4edda; color: #155724; }
+  .status.rejected { background: #f8d7da; color: #721c24; }
+  .btn { padding: 6px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-approve { background: #38a169; color: #fff; }
+  .btn-reject { background: #e53e3e; color: #fff; margin-left: 6px; }
+  .btn-view { background: #3182ce; color: #fff; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #fff; border-radius: 12px; padding: 28px; width: 560px; max-width: 90vw; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+  .modal .field { display: flex; margin-bottom: 10px; }
+  .modal .field .label { width: 120px; color: #666; font-size: 13px; flex-shrink: 0; }
+  .modal .field .value { font-size: 14px; font-weight: 500; }
+  .modal .actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 8px; }
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 500; z-index: 200; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: #38a169; }
+  .toast.error { background: #e53e3e; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>承認管理システム</h1>
+  <span class="user">管理者: 山田花子 (admin@example.co.jp)</span>
+</div>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card pending"><div class="label">承認待ち</div><div class="value" id="count-pending">-</div></div>
+    <div class="stat-card approved"><div class="label">承認済み</div><div class="value" id="count-approved">-</div></div>
+    <div class="stat-card rejected"><div class="label">却下</div><div class="value" id="count-rejected">-</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>申請ID</th>
+        <th>件名</th>
+        <th>申請者</th>
+        <th>部署</th>
+        <th>区分</th>
+        <th class="amount">金額 (円)</th>
+        <th>状態</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="doc-table"></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const documents = [
+  { id: "DOC-2024-001", title: "事務用品購入申請", applicant: "田中太郎", department: "engineering", category: "operational_expenditure", amount: 45000, submitted_date: "2026-03-01", status: "pending", description: "開発チーム用のモニター台、ケーブル類、文房具の購入。業務効率化のため。" },
+  { id: "DOC-2024-002", title: "出張旅費精算", applicant: "山本花子", department: "sales", category: "operational_expenditure", amount: 82000, submitted_date: "2026-03-02", status: "pending", description: "大阪支社への出張。新規顧客開拓のための営業活動。交通費・宿泊費込み。" },
+  { id: "DOC-2024-003", title: "社員研修費用", applicant: "高橋一郎", department: "engineering", category: "operational_expenditure", amount: 150000, submitted_date: "2026-03-03", status: "pending", description: "クラウドアーキテクチャ研修。外部セミナー3日間コース。" },
+  { id: "DOC-2024-004", title: "開発用サーバー購入", applicant: "伊藤美咲", department: "engineering", category: "capital_expenditure", amount: 480000, submitted_date: "2026-03-04", status: "pending", description: "ステージング環境用の物理サーバー。現行機のリプレース。" },
+  { id: "DOC-2024-005", title: "サーバールーム増設工事", applicant: "佐藤次郎", department: "infrastructure", category: "capital_expenditure", amount: 750000, submitted_date: "2026-03-05", status: "pending", description: "サーバールームの電源増設および空調設備追加工事。" },
+  { id: "DOC-2024-006", title: "マーケティングツール年間契約", applicant: "中村由紀", department: "marketing", category: "operational_expenditure", amount: 360000, submitted_date: "2026-03-06", status: "pending", description: "MA(マーケティングオートメーション)ツールの年間ライセンス契約。" },
+  { id: "DOC-2024-007", title: "新オフィスビル建設計画", applicant: "鈴木三郎", department: "facilities", category: "facility_construction", amount: 2500000, submitted_date: "2026-03-07", status: "pending", description: "本社移転に伴う新オフィスの設計・建設計画。第一期工事費用。" },
+  { id: "DOC-2024-008", title: "チームビルディング費用", applicant: "渡辺健太", department: "hr", category: "operational_expenditure", amount: 55000, submitted_date: "2026-03-08", status: "pending", description: "四半期ごとのチームビルディングイベント。飲食費・会場費。" }
+];
+
+const categoryLabels = {
+  operational_expenditure: "経費",
+  capital_expenditure: "設備投資",
+  facility_construction: "建設"
+};
+
+function render() {
+  const tbody = document.getElementById("doc-table");
+  tbody.innerHTML = documents.map(doc => `
+    <tr data-doc-id="${doc.id}" data-amount="${doc.amount}" data-department="${doc.department}" data-category="${doc.category}">
+      <td>${doc.id}</td>
+      <td>${doc.title}</td>
+      <td>${doc.applicant}</td>
+      <td>${doc.department}</td>
+      <td>${categoryLabels[doc.category] || doc.category}</td>
+      <td class="amount">${doc.amount.toLocaleString()}</td>
+      <td><span class="status ${doc.status}">${statusLabel(doc.status)}</span></td>
+      <td>
+        <button class="btn btn-view" data-testid="view-btn-${doc.id}" onclick="viewDoc('${doc.id}')">詳細</button>
+      </td>
+    </tr>
+  `).join("");
+
+  document.getElementById("count-pending").textContent = documents.filter(d => d.status === "pending").length;
+  document.getElementById("count-approved").textContent = documents.filter(d => d.status === "approved").length;
+  document.getElementById("count-rejected").textContent = documents.filter(d => d.status === "rejected").length;
+}
+
+function statusLabel(s) {
+  return { pending: "承認待ち", approved: "承認済み", rejected: "却下" }[s] || s;
+}
+
+function viewDoc(id) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) return;
+  const modal = document.getElementById("modal");
+  const isPending = doc.status === "pending";
+  modal.innerHTML = `
+    <h2>${doc.title}</h2>
+    <div class="field"><span class="label">申請ID</span><span class="value">${doc.id}</span></div>
+    <div class="field"><span class="label">申請者</span><span class="value">${doc.applicant}</span></div>
+    <div class="field"><span class="label">部署</span><span class="value">${doc.department}</span></div>
+    <div class="field"><span class="label">区分</span><span class="value">${categoryLabels[doc.category] || doc.category}</span></div>
+    <div class="field"><span class="label">金額</span><span class="value">¥${doc.amount.toLocaleString()}</span></div>
+    <div class="field"><span class="label">申請日</span><span class="value">${doc.submitted_date}</span></div>
+    <div class="field"><span class="label">状態</span><span class="value"><span class="status ${doc.status}">${statusLabel(doc.status)}</span></span></div>
+    <div class="field"><span class="label">内容</span><span class="value">${doc.description}</span></div>
+    <div class="actions">
+      <button class="btn" style="background:#999;color:#fff" onclick="closeModal()">閉じる</button>
+      ${isPending ? `
+        <button class="btn btn-reject" data-testid="reject-btn" data-doc-id="${doc.id}" onclick="decide('${doc.id}','rejected')">却下</button>
+        <button class="btn btn-approve" data-testid="approve-btn" data-doc-id="${doc.id}" onclick="decide('${doc.id}','approved')">承認</button>
+      ` : ""}
+    </div>
+  `;
+  document.getElementById("modal-overlay").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("active");
+}
+
+function decide(id, newStatus) {
+  const doc = documents.find(d => d.id === id);
+  if (doc) {
+    doc.status = newStatus;
+    closeModal();
+    render();
+    showToast(newStatus === "approved" ? `${doc.id} を承認しました` : `${doc.id} を却下しました`, newStatus === "approved" ? "success" : "error");
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + type + " show";
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+document.getElementById("modal-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+render();
+</script>
+</body>
+</html>

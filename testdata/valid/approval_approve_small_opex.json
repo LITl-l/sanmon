@@ -1,0 +1,26 @@
+{
+  "action_type": "approve",
+  "target": "DOC-2024-001",
+  "parameters": {
+    "document": {
+      "id": "DOC-2024-001",
+      "title": "事務用品購入申請",
+      "amount": 45000,
+      "department": "engineering",
+      "category": "operational_expenditure",
+      "applicant": "田中太郎",
+      "submitted_date": "2026-03-01"
+    },
+    "reason": "10万円未満の経費申請のため自動承認"
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-backoffice-001",
+    "domain": "approval"
+  },
+  "metadata": {
+    "timestamp": "2026-03-12T10:00:00Z",
+    "agent_id": "chrome-mcp-agent",
+    "request_id": "req-approval-001"
+  }
+}

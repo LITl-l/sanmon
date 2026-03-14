@@ -1,0 +1,26 @@
+{
+  "action_type": "approve",
+  "target": "DOC-2024-005",
+  "parameters": {
+    "document": {
+      "id": "DOC-2024-005",
+      "title": "サーバールーム増設工事",
+      "amount": 750000,
+      "department": "infrastructure",
+      "category": "capital_expenditure",
+      "applicant": "佐藤次郎",
+      "submitted_date": "2026-03-05"
+    },
+    "reason": "Attempting to approve a large capex"
+  },
+  "context": {
+    "authenticated": true,
+    "session_id": "sess-backoffice-001",
+    "domain": "approval"
+  },
+  "metadata": {
+    "timestamp": "2026-03-12T10:02:00Z",
+    "agent_id": "chrome-mcp-agent",
+    "request_id": "req-approval-003"
+  }
+}
