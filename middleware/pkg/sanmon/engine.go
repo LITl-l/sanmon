@@ -85,9 +85,6 @@ func (e *Engine) ValidateJSON(data []byte) (ValidationResult, error) {
 	return e.Validate(&a), nil
 }
 
-// TEMP STUB part 2 (FUNC) — removed in Task 3 when validate_agent.go lands.
-func validateAgent(_ *Action, _ *AgentPolicy) []Violation { return nil }
-
 func (e *Engine) validatePolicy(a *Action, p *Policy) []Violation {
 	switch a.Context.Domain {
 	case "browser":
