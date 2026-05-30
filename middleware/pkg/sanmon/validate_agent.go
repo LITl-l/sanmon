@@ -173,7 +173,26 @@ func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 			Severity: SeverityError,
 		})
 	}
+
+	if isGitForcePush(cmd) {
+		violations = append(violations, Violation{
+			Rule:     "agent.force_push",
+			Message:  "force-pushing can overwrite remote history",
+			Path:     "parameters.command",
+			Severity: SeverityError,
+		})
+	}
 	return violations
+}
+
+// isGitForcePush reports whether the command is a forced git push.
+func isGitForcePush(cmd string) bool {
+	if !strings.Contains(cmd, "git") || !strings.Contains(cmd, "push") {
+		return false
+	}
+	return strings.Contains(cmd, "--force") ||
+		strings.Contains(cmd, "--force-with-lease") ||
+		regexp.MustCompile(`(^|\s)-[a-zA-Z]*f`).MatchString(cmd)
 }
 
 func validateFileMutation(a *Action, p *AgentPolicy) []Violation { return nil }

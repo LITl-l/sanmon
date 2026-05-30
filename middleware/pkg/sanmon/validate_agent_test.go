@@ -96,6 +96,25 @@ func TestShellPipelineExfil(t *testing.T) {
 	}
 }
 
+func TestShellForcePush(t *testing.T) {
+	p := StarterAgentPolicy()
+	for _, cmd := range []string{
+		"git push --force origin main",
+		"git push -f",
+		"git push origin master --force-with-lease",
+	} {
+		a := agentAction("shell_exec", cmd, map[string]interface{}{"command": cmd})
+		if v := validateShellExec(a, &p); !hasRule(v, "force_push") {
+			t.Errorf("cmd %q: expected force_push, got %v", cmd, v)
+		}
+	}
+	// Plain push is allowed.
+	ok := agentAction("shell_exec", "git push origin feature", map[string]interface{}{"command": "git push origin feature"})
+	if v := validateShellExec(ok, &p); hasRule(v, "force_push") {
+		t.Errorf("plain push should be allowed, got %v", v)
+	}
+}
+
 func TestPathMatchesAnyAbsolute(t *testing.T) {
 	protected := []string{"*/.ssh/*", "*/.aws/*", "*/.config/gh/*"}
 	mustMatch := []string{
