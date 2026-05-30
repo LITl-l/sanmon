@@ -9,35 +9,56 @@ import (
 	"github.com/sanmon/middleware/pkg/sanmon"
 )
 
-// runInit implements: sanmon init <agent> [--dir <root>]
-// It writes a starter policy (protective AgentPolicy) and prints the hook
-// registration the user adds to their agent so tool calls route through
-// `sanmon guard`.
+// runInit implements: sanmon init <agent> [--dir <path>] [--force]
+// It writes a starter policy to <dir>/.sanmon/policy.json and prints hook
+// installation instructions. If the policy file already exists and --force is
+// not set, it prints a message and exits without overwriting.
 func runInit(args []string) {
 	if len(args) == 0 {
-		fatalf("usage: sanmon init <claude|codex|generic> [--dir <root>]")
+		fatalf("usage: sanmon init <agent> [--dir <path>] [--force]")
 	}
 	agent := args[0]
 	dir := "."
+	force := false
+
 	for i := 1; i < len(args); i++ {
-		if args[i] == "--dir" && i+1 < len(args) {
+		switch args[i] {
+		case "--dir":
 			i++
-			dir = args[i]
+			if i < len(args) {
+				dir = args[i]
+			}
+		case "--force":
+			force = true
 		}
 	}
 
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		fatalf("resolve dir: %v", err)
-	}
-	sanmonDir := filepath.Join(absDir, ".sanmon")
-	if err := os.MkdirAll(sanmonDir, 0o755); err != nil {
-		fatalf("mkdir .sanmon: %v", err)
+	if !knownAgents[agent] {
+		fatalf("unknown agent %q (want: generic|claude|codex)", agent)
 	}
 
+	sanmonDir := filepath.Join(dir, ".sanmon")
+	if err := os.MkdirAll(sanmonDir, 0o755); err != nil {
+		fatalf("create .sanmon dir: %v", err)
+	}
+
+	policyPath := filepath.Join(sanmonDir, "policy.json")
+
+	// Fix 4: do not clobber an existing policy unless --force is set.
+	if _, err := os.Stat(policyPath); err == nil {
+		// File exists.
+		if !force {
+			fmt.Fprintf(os.Stderr, "policy already exists at %s; re-run with --force to overwrite\n", policyPath)
+			// Still print hook instructions even when skipping.
+			printHookInstructions(agent, policyPath)
+			return
+		}
+	}
+
+	// Build and write the starter policy.
 	policy := sanmon.DefaultPolicy()
 	policy.Agent = sanmon.StarterAgentPolicy()
-	policyPath := filepath.Join(sanmonDir, "policy.json")
+
 	data, err := json.MarshalIndent(policy, "", "  ")
 	if err != nil {
 		fatalf("marshal policy: %v", err)
@@ -46,38 +67,54 @@ func runInit(args []string) {
 		fatalf("write policy: %v", err)
 	}
 
-	self, _ := os.Executable()
-	if self == "" {
-		self = "sanmon"
-	}
-	fmt.Printf("Wrote starter policy: %s\n\n", policyPath)
-	printHookInstructions(agent, self, policyPath)
+	fmt.Printf("wrote starter policy → %s\n", policyPath)
+	printHookInstructions(agent, policyPath)
 }
 
-func printHookInstructions(agent, self, policyPath string) {
-	guardCmd := fmt.Sprintf("%s guard --agent %s --policy %s", self, agent, policyPath)
+func printHookInstructions(agent, policyPath string) {
+	absPolicy, err := filepath.Abs(policyPath)
+	if err != nil {
+		absPolicy = policyPath
+	}
+
 	switch agent {
 	case "claude":
-		fmt.Println("Add to .claude/settings.json:")
-		fmt.Printf(`{
+		fmt.Printf(`
+To enable the guard hook for Claude Code, add the following to your
+.claude/settings.json (or settings.local.json):
+
   "hooks": {
     "PreToolUse": [
-      { "matcher": "*", "hooks": [ { "type": "command", "command": %q } ] }
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sanmon guard --agent claude --policy %s"
+          }
+        ]
+      }
     ]
   }
-}
-`, guardCmd)
+
+`, absPolicy)
+
 	case "codex":
-		fmt.Println("Add to ~/.codex/config.toml:")
-		fmt.Printf(`[[hooks.PreToolUse]]
-matcher = ".*"
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = %q
-`, guardCmd)
-	default:
-		fmt.Println("Pipe your agent's proposed tool call (JSON) into:")
-		fmt.Printf("  %s\n", guardCmd)
-		fmt.Println("Generic input: {\"tool\":\"shell_exec\",\"command\":\"...\"}")
+		fmt.Printf(`
+To enable the guard hook for Codex, add the following to your
+codex configuration:
+
+  pre_tool_use_hook: "sanmon guard --agent codex --policy %s"
+
+`, absPolicy)
+
+	default: // generic
+		fmt.Printf(`
+To use the guard in generic mode, pipe tool-call JSON through it:
+
+  echo '{"tool":"shell_exec","command":"ls"}' | \
+    sanmon guard --agent generic --policy %s
+
+`, absPolicy)
 	}
 }
