@@ -49,7 +49,7 @@ theorem deny_dominates :
   | cons d rest ih =>
     intro h
     cases List.mem_cons.mp h with
-    | inl hd => subst hd; rfl
+    | inl hd => rw [hd]; simp [combineAll, Decision.combine]
     | inr htl =>
       have hrest : combineAll rest = Decision.deny := ih htl
       show Decision.combine d (combineAll rest) = Decision.deny
