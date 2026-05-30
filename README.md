@@ -88,6 +88,12 @@ The starter policy covers: `agent.destructive_delete`, `agent.secret_exfiltratio
 | Cursor / Cline / Amp / opencode | stdin-JSON veto | 🔜 (codecs planned) |
 | Gemini CLI / Copilot CLI / Aider / Windsurf | no external pre-exec veto yet | ⛔ out of scope until they ship hooks |
 
+### Limitations (current)
+
+- **Unknown tool names fail open.** A tool sanmon doesn't recognize is treated as read-class (allowed) rather than blocked, to avoid breaking benign tools. Recognized destructive tools (shell, file write/edit) fail closed.
+- **MCP tool calls are not yet inspected.** `mcp_call` actions pass through; per-server/per-tool MCP policy is planned.
+- **Shell parsing is shape-based, not a full parser.** Pipeline/quote handling is intentionally simple and errs toward over-blocking (false positives) rather than under-blocking. Deeper data-flow analysis (variables, subshells, base64) is planned.
+
 ## Quick Start
 
 ```bash

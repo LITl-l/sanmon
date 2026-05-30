@@ -164,6 +164,9 @@ func DefaultPolicy() *Policy {
 // StarterAgentPolicy returns the opinionated, protective agent policy that
 // `sanmon init` installs. These patterns are mirrored in
 // policy/domains/agent/policy.cue (the single source of truth).
+//
+// Until CUE→Go generation lands (follow-up), edits here MUST also be made in
+// policy/domains/agent/policy.cue.
 func StarterAgentPolicy() AgentPolicy {
 	return AgentPolicy{
 		DenyCommandRules: []CommandRule{

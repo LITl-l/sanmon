@@ -48,6 +48,9 @@ func runGuard(args []string) {
 	if policyPath != "" {
 		if _, err := os.Stat(policyPath); err != nil {
 			if os.IsNotExist(err) {
+				// A missing explicit --policy is an operator error, not a normal condition, so
+				// we fail closed for ALL action classes here (not just destructive): better to
+				// block than to silently fall back to the permissive default.
 				// We don't have class yet; use ClassDestructive to be conservative.
 				guardFailClosed(agent, sanmon.ClassDestructive, "policy file not found: "+policyPath)
 			} else {

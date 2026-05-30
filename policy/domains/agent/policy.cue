@@ -24,6 +24,8 @@ package agent
 }
 
 // Starter (opt-in, protective) policy.
+// Until CUE→Go generation lands (follow-up), edits to this starter policy
+// MUST also be made in StarterAgentPolicy() in middleware/pkg/sanmon/policy.go.
 policy: {
 	deny_command_rules: [...#CommandRule] | *[
 		{pattern: #"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\b"#, rule: "destructive_delete", message: "recursive force-delete (rm -rf) is forbidden"},
