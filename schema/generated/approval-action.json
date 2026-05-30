@@ -1,15 +1,12 @@
 {
-  "$id": "https://sanmon.dev/schemas/api-action.json",
+  "$id": "https://sanmon.dev/schemas/approval-action.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Schema for API/MCP agent actions",
+  "description": "Schema for document approval workflow actions",
   "properties": {
     "action_type": {
       "enum": [
-        "get",
-        "post",
-        "put",
-        "patch",
-        "delete"
+        "approve",
+        "reject"
       ],
       "type": "string"
     },
@@ -64,6 +61,45 @@
       "type": "object"
     },
     "parameters": {
+      "properties": {
+        "document": {
+          "properties": {
+            "amount": {
+              "type": "number"
+            },
+            "applicant": {
+              "type": "string"
+            },
+            "category": {
+              "type": "string"
+            },
+            "department": {
+              "type": "string"
+            },
+            "id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "submitted_date": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "amount"
+          ],
+          "type": "object"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "document"
+      ],
       "type": "object"
     },
     "target": {
@@ -78,6 +114,6 @@
     "context",
     "metadata"
   ],
-  "title": "API Action",
+  "title": "Approval Action",
   "type": "object"
 }

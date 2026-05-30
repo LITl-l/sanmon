@@ -52,6 +52,7 @@ schema: build-cli
     @./bin/sanmon schema --domain database > schema/generated/database-action.json
     @./bin/sanmon schema --domain iac      > schema/generated/iac-action.json
     @./bin/sanmon schema --domain approval > schema/generated/approval-action.json
+    @./bin/sanmon schema --domain agent     > schema/generated/agent-action.json
     @echo "JSON Schemas exported to schema/generated/"
 
 # ── Demo: backoffice approval mock app ──
@@ -69,6 +70,7 @@ policy-check:
     cue vet ./policy/domains/api/
     cue vet ./policy/domains/database/
     cue vet ./policy/domains/iac/
+    cue vet ./policy/domains/agent/
 
 # ── Proto: Generate gRPC Go code (requires buf) ──
 

@@ -277,3 +277,9 @@ func approvalSchema() map[string]interface{} {
 	}
 	return schema
 }
+
+func agentSchema() map[string]interface{} {
+	return makeSchema("agent", "Agent Action",
+		"Schema for a coding agent's own tool calls (shell, file, network, MCP)",
+		[]string{"shell_exec", "file_write", "file_edit", "file_read", "net_fetch", "mcp_call"})
+}

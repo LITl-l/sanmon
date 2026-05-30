@@ -24,7 +24,9 @@
             "browser",
             "api",
             "database",
-            "iac"
+            "iac",
+            "approval",
+            "agent"
           ],
           "type": "string"
         },
