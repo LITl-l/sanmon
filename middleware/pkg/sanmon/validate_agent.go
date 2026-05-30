@@ -195,5 +195,41 @@ func isGitForcePush(cmd string) bool {
 		regexp.MustCompile(`(^|\s)-[a-zA-Z]*f`).MatchString(cmd)
 }
 
-func validateFileMutation(a *Action, p *AgentPolicy) []Violation { return nil }
-func validateNetFetch(a *Action, p *AgentPolicy) []Violation     { return nil }
+func validateFileMutation(a *Action, p *AgentPolicy) []Violation {
+	filePath := getParamString(a.Parameters, "path")
+	if filePath == "" {
+		filePath = a.Target
+	}
+	var violations []Violation
+
+	if pathMatchesAny(filePath, p.ProtectedPaths) {
+		violations = append(violations, Violation{
+			Rule:     "agent.protected_path_write",
+			Message:  "writing to a protected path is forbidden: " + filePath,
+			Path:     "parameters.path",
+			Severity: SeverityError,
+		})
+	}
+
+	content := getParamString(a.Parameters, "content")
+	if content != "" {
+		for _, pat := range p.SecretContentPatterns {
+			re, err := regexp.Compile(pat)
+			if err != nil {
+				continue
+			}
+			if re.MatchString(content) {
+				violations = append(violations, Violation{
+					Rule:     "agent.secret_in_write",
+					Message:  "file content appears to contain a secret/credential",
+					Path:     "parameters.content",
+					Severity: SeverityError,
+				})
+				break
+			}
+		}
+	}
+	return violations
+}
+
+func validateNetFetch(a *Action, p *AgentPolicy) []Violation { return nil }

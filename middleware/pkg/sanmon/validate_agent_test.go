@@ -115,6 +115,32 @@ func TestShellForcePush(t *testing.T) {
 	}
 }
 
+func TestFileMutationProtectedPath(t *testing.T) {
+	p := StarterAgentPolicy()
+	a := agentAction("file_write", "/home/u/.ssh/authorized_keys",
+		map[string]interface{}{"path": "/home/u/.ssh/authorized_keys", "content": "ssh-rsa AAAA"})
+	if v := validateFileMutation(a, &p); !hasRule(v, "protected_path_write") {
+		t.Errorf("expected protected_path_write, got %v", v)
+	}
+
+	ok := agentAction("file_write", "src/main.go",
+		map[string]interface{}{"path": "src/main.go", "content": "package main"})
+	if v := validateFileMutation(ok, &p); len(v) != 0 {
+		t.Errorf("expected normal source write to pass, got %v", v)
+	}
+}
+
+func TestFileMutationSecretContent(t *testing.T) {
+	p := StarterAgentPolicy()
+	a := agentAction("file_write", "notes.txt", map[string]interface{}{
+		"path":    "notes.txt",
+		"content": "-----BEGIN RSA PRIVATE KEY-----\nMIIE...",
+	})
+	if v := validateFileMutation(a, &p); !hasRule(v, "secret_in_write") {
+		t.Errorf("expected secret_in_write, got %v", v)
+	}
+}
+
 func TestPathMatchesAnyAbsolute(t *testing.T) {
 	protected := []string{"*/.ssh/*", "*/.aws/*", "*/.config/gh/*"}
 	mustMatch := []string{
