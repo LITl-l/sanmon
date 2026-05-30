@@ -88,6 +88,57 @@ func TestEncodeDecisions(t *testing.T) {
 	}
 }
 
+func TestDecodeHookMalformedToolInputFailsClosed(t *testing.T) {
+	// Destructive tool with null / non-object / non-string-command tool_input
+	// must return an error so the guard fails closed.
+	bad := []string{
+		`{"tool_name":"Bash","tool_input":null}`,
+		`{"tool_name":"Bash","tool_input":42}`,
+		`{"tool_name":"Bash","tool_input":{"command":["rm","-rf","~"]}}`,
+		`{"tool_name":"Write","tool_input":null}`,
+		`{"tool_name":"Bash"}`,
+	}
+	for _, in := range bad {
+		_, class, err := DecodeAgentPayload("claude", []byte(in))
+		if err == nil {
+			t.Errorf("expected decode error (fail-closed) for %s", in)
+		}
+		if class != ClassDestructive {
+			t.Errorf("expected ClassDestructive for %s, got %v", in, class)
+		}
+	}
+}
+
+func TestDecodeHookReadClassMalformedFailsOpen(t *testing.T) {
+	// A read-class tool with null tool_input should NOT error (fail-open).
+	a, class, err := DecodeAgentPayload("claude", []byte(`{"tool_name":"Read","tool_input":null}`))
+	if err != nil {
+		t.Fatalf("read-class null tool_input should not error, got %v", err)
+	}
+	if class != ClassRead {
+		t.Errorf("expected ClassRead, got %v", class)
+	}
+	if a.ActionType != "file_read" {
+		t.Errorf("expected file_read, got %q", a.ActionType)
+	}
+}
+
+func TestDecodeHookMcpNormalized(t *testing.T) {
+	a, _, err := DecodeAgentPayload("claude", []byte(`{"tool_name":"mcp__filesystem__read_file","tool_input":{}}`))
+	if err != nil {
+		t.Fatalf("mcp decode error: %v", err)
+	}
+	if a.ActionType != "mcp_call" {
+		t.Fatalf("expected mcp_call, got %q", a.ActionType)
+	}
+	if got := getParamString(a.Parameters, "server"); got != "filesystem" {
+		t.Errorf("expected server=filesystem, got %q", got)
+	}
+	if got := getParamString(a.Parameters, "tool"); got != "read_file" {
+		t.Errorf("expected tool=read_file, got %q", got)
+	}
+}
+
 func TestEncodeDecisionFallbacksAreFailClosed(t *testing.T) {
 	// The hard-coded fail-closed fallbacks must be valid JSON that denies.
 	claudeFallback := []byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"sanmon: internal encode error (failing closed)"}}`)

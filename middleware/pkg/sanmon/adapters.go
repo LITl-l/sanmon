@@ -101,6 +101,17 @@ func decodeGeneric(data []byte) (*Action, ActionClass, error) {
 	return buildAction(g.Tool, target, params, g.AgentID, g.Session, "generic"), classForActionType(g.Tool), nil
 }
 
+// toolInputIsMalformed reports whether a non-empty tool_input failed to parse
+// as a JSON object (e.g. null, number, string, or array). An absent tool_input
+// (len 0) is treated as an empty object, not malformed.
+func toolInputIsMalformed(raw json.RawMessage, parsed map[string]interface{}) bool {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" {
+		return false // absent → empty object
+	}
+	return parsed == nil // present but did not unmarshal into an object
+}
+
 func decodeHook(agent string, data []byte) (*Action, ActionClass, error) {
 	var h hookPayload
 	if err := json.Unmarshal(data, &h); err != nil {
@@ -129,8 +140,15 @@ func decodeHook(agent string, data []byte) (*Action, ActionClass, error) {
 		params["path"] = get("file_path")
 		params["content"] = get("content")
 	case h.ToolName == "Edit" || h.ToolName == "MultiEdit" || h.ToolName == "NotebookEdit" || h.ToolName == "apply_patch":
-		actionType, target = "file_edit", get("file_path")
-		params["path"] = get("file_path")
+		fp := get("file_path")
+		actionType = "file_edit"
+		if fp != "" {
+			target = fp
+			params["path"] = fp
+		} else if patch := get("patch"); patch != "" {
+			target = "apply_patch"
+			params["patch"] = patch
+		}
 	case h.ToolName == "Read":
 		actionType, target = "file_read", get("file_path")
 		params["path"] = get("file_path")
@@ -139,13 +157,35 @@ func decodeHook(agent string, data []byte) (*Action, ActionClass, error) {
 		params["url"] = get("url")
 		params["host"] = hostFromURL(get("url"))
 	case strings.HasPrefix(h.ToolName, "mcp__"):
-		actionType, target = "mcp_call", h.ToolName
-		params["server"] = h.ToolName
+		actionType = "mcp_call"
+		rest := strings.TrimPrefix(h.ToolName, "mcp__")
+		parts := strings.SplitN(rest, "__", 2)
+		server := parts[0]
+		tool := ""
+		if len(parts) == 2 {
+			tool = parts[1]
+		}
+		params["server"] = server
+		params["tool"] = tool
+		target = server
+		if tool != "" {
+			target = server + "." + tool
+		}
 	default:
 		// Unknown tool: treat as read-class so we fail-open rather than block
 		// benign tools we don't model yet.
 		actionType, target = "file_read", h.ToolName
 	}
+
+	// Destructive tools must carry a usable primary field; a missing/non-string
+	// value (or a non-object tool_input) means we cannot reason about safety, so
+	// fail closed rather than emit an allow.
+	if classForActionType(actionType) == ClassDestructive {
+		if target == "" || toolInputIsMalformed(h.ToolInput, ti) {
+			return nil, ClassDestructive, fmt.Errorf("%s tool %q: missing or malformed tool_input (failing closed)", agent, h.ToolName)
+		}
+	}
+
 	return buildAction(actionType, target, params, agent, h.SessionID, agent), classForActionType(actionType), nil
 }
 
