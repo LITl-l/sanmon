@@ -165,6 +165,10 @@ func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 			Severity: SeverityError,
 		})
 	}
+	// PR1 intentional heuristic: fires whenever a remote-fetch command and a shell
+	// interpreter appear anywhere in the same pipeline, including &&-separated
+	// segments (e.g. `curl ... -o data.json && bash build.sh`). Requiring a
+	// literal `|` between the fetch and shell invocation is deferred to PR2.
 	if hasRemoteFetch && pipesToShell && len(segments) >= 2 {
 		violations = append(violations, Violation{
 			Rule:     "agent.remote_code_execution",
@@ -185,14 +189,28 @@ func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 	return violations
 }
 
-// isGitForcePush reports whether the command is a forced git push.
+// gitShortForceFlagRe matches a short -f flag (possibly bundled, e.g. -uf) as a
+// standalone argument. Compiled once at package init, not per call.
+var gitShortForceFlagRe = regexp.MustCompile(`(^|\s)-[a-zA-Z]*f([a-zA-Z]*)?(\s|$)`)
+
+// gitForceLongRe matches the dangerous --force / --force-with-lease flags as
+// whole words, so the SAFE --force-if-includes flag is not matched.
+var gitForceLongRe = regexp.MustCompile(`--force(-with-lease)?(\s|$)`)
+
+// isGitForcePush reports whether the command force-pushes with git. The flag
+// check is scoped to the pipeline segment that actually contains "git" and
+// "push", so an unrelated -f in another subcommand (e.g. `grep -f x && git
+// push`) does not trip it.
 func isGitForcePush(cmd string) bool {
-	if !strings.Contains(cmd, "git") || !strings.Contains(cmd, "push") {
-		return false
+	for _, seg := range splitPipeline(cmd) {
+		if !strings.Contains(seg, "git") || !strings.Contains(seg, "push") {
+			continue
+		}
+		if gitForceLongRe.MatchString(seg) || gitShortForceFlagRe.MatchString(seg) {
+			return true
+		}
 	}
-	return strings.Contains(cmd, "--force") ||
-		strings.Contains(cmd, "--force-with-lease") ||
-		regexp.MustCompile(`(^|\s)-[a-zA-Z]*f`).MatchString(cmd)
+	return false
 }
 
 func validateFileMutation(a *Action, p *AgentPolicy) []Violation {
@@ -255,7 +273,7 @@ func validateNetFetch(a *Action, p *AgentPolicy) []Violation {
 
 // hostFromURL extracts the host from a URL string without failing on junk.
 func hostFromURL(raw string) string {
-	s := raw
+	s := strings.ToLower(raw)
 	if i := strings.Index(s, "://"); i >= 0 {
 		s = s[i+3:]
 	}

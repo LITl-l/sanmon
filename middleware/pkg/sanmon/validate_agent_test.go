@@ -182,3 +182,40 @@ func TestPathMatchesAnyAbsolute(t *testing.T) {
 		}
 	}
 }
+
+func TestForcePushFalsePositives(t *testing.T) {
+	p := StarterAgentPolicy()
+	// Unrelated -f in a preceding subcommand must NOT trip force_push.
+	for _, cmd := range []string{
+		"grep -f patterns.txt .gitignore && git push origin main",
+		"git push --force-if-includes origin main",
+		"git push origin feature",
+	} {
+		a := agentAction("shell_exec", cmd, map[string]interface{}{"command": cmd})
+		if v := validateShellExec(a, &p); hasRule(v, "force_push") {
+			t.Errorf("cmd %q should NOT be flagged as force_push, got %v", cmd, v)
+		}
+	}
+	// Real force pushes still caught.
+	for _, cmd := range []string{
+		"git push --force origin main",
+		"git push -f",
+		"git push origin master --force-with-lease",
+		"grep x file && git push -f origin main",
+	} {
+		a := agentAction("shell_exec", cmd, map[string]interface{}{"command": cmd})
+		if v := validateShellExec(a, &p); !hasRule(v, "force_push") {
+			t.Errorf("cmd %q SHOULD be flagged as force_push, got %v", cmd, v)
+		}
+	}
+}
+
+func TestNetFetchDeniedHostCaseInsensitive(t *testing.T) {
+	p := StarterAgentPolicy()
+	p.DeniedNetHosts = []string{"evil.example.com"}
+	a := agentAction("net_fetch", "HTTPS://EVIL.EXAMPLE.COM/x",
+		map[string]interface{}{"url": "HTTPS://EVIL.EXAMPLE.COM/x"})
+	if v := validateNetFetch(a, &p); !hasRule(v, "denied_net_host") {
+		t.Errorf("expected denied_net_host for uppercase host, got %v", v)
+	}
+}
