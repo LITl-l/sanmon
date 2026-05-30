@@ -94,6 +94,30 @@ func pathMatchesAny(filePath string, patterns []string) bool {
 	return false
 }
 
+// rceShells are interpreters that, when fed piped remote content, execute it.
+var rceShells = map[string]bool{"bash": true, "sh": true, "zsh": true, "dash": true, "ksh": true}
+
+// segmentReadsSecret reports whether a pipeline segment reads a secret file.
+func segmentReadsSecret(seg string, secretPatterns []string) bool {
+	for _, tok := range strings.Fields(seg) {
+		if pathMatchesAny(tok, secretPatterns) {
+			return true
+		}
+	}
+	return false
+}
+
+// segmentIsExternalSink reports whether a segment sends data off-host.
+func segmentIsExternalSink(seg string, sinks []string) bool {
+	cmd := firstToken(seg)
+	for _, s := range sinks {
+		if cmd == s {
+			return true
+		}
+	}
+	return strings.Contains(seg, "http://") || strings.Contains(seg, "https://")
+}
+
 func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 	cmd := normalizeCommand(commandForAction(a))
 	if cmd == "" {
@@ -114,6 +138,40 @@ func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 				Severity: SeverityError,
 			})
 		}
+	}
+
+	segments := splitPipeline(cmd)
+	readsSecret, hasExternalSink, hasRemoteFetch, pipesToShell := false, false, false, false
+	for _, seg := range segments {
+		if segmentReadsSecret(seg, p.SecretFilePatterns) {
+			readsSecret = true
+		}
+		if segmentIsExternalSink(seg, p.ExternalSinkCommands) {
+			hasExternalSink = true
+		}
+		ft := firstToken(seg)
+		if ft == "curl" || ft == "wget" {
+			hasRemoteFetch = true
+		}
+		if rceShells[ft] {
+			pipesToShell = true
+		}
+	}
+	if readsSecret && hasExternalSink {
+		violations = append(violations, Violation{
+			Rule:     "agent.secret_exfiltration",
+			Message:  "reads a secret file and pipes it to an external host",
+			Path:     "parameters.command",
+			Severity: SeverityError,
+		})
+	}
+	if hasRemoteFetch && pipesToShell && len(segments) >= 2 {
+		violations = append(violations, Violation{
+			Rule:     "agent.remote_code_execution",
+			Message:  "pipes remotely-fetched content into a shell interpreter",
+			Path:     "parameters.command",
+			Severity: SeverityError,
+		})
 	}
 	return violations
 }
