@@ -70,6 +70,28 @@ type IaCPolicy struct {
 	AllowPlan            bool     `json:"allow_plan"`
 }
 
+// CommandRule is a single named shell-command deny rule.
+// Pattern is an RE2 regex matched against the normalized command.
+type CommandRule struct {
+	Pattern string `json:"pattern"`
+	Rule    string `json:"rule"`
+	Message string `json:"message"`
+}
+
+// AgentPolicy defines constraints for a coding agent's own tool calls
+// (shell execution, file writes/edits, network fetches, MCP calls).
+// Empty fields mean "no constraint" — the default policy is permissive;
+// StarterAgentPolicy() is the opt-in protective set installed by `sanmon init`.
+type AgentPolicy struct {
+	DenyCommandRules      []CommandRule `json:"deny_command_rules"`
+	ProtectedPaths        []string      `json:"protected_paths"`         // globs (path.Match) for file_write/file_edit
+	ProtectedBranches     []string      `json:"protected_branches"`      // reserved for force-push refinement (PR2)
+	DeniedNetHosts        []string      `json:"denied_net_hosts"`        // suffix match for net_fetch host
+	SecretFilePatterns    []string      `json:"secret_file_patterns"`    // globs; reading+piping these to a sink = exfil
+	SecretContentPatterns []string      `json:"secret_content_patterns"` // RE2 regex on file_write content
+	ExternalSinkCommands  []string      `json:"external_sink_commands"`  // commands that send data off-host (curl, wget, ...)
+}
+
 // DefaultPolicy returns a policy with sensible defaults matching the CUE definitions.
 func DefaultPolicy() *Policy {
 	return &Policy{
@@ -135,6 +157,38 @@ func DefaultPolicy() *Policy {
 				},
 			},
 		},
+		Agent: AgentPolicy{}, // permissive by default; see StarterAgentPolicy()
+	}
+}
+
+// StarterAgentPolicy returns the opinionated, protective agent policy that
+// `sanmon init` installs. These patterns are mirrored in
+// policy/domains/agent/policy.cue (the single source of truth).
+func StarterAgentPolicy() AgentPolicy {
+	return AgentPolicy{
+		DenyCommandRules: []CommandRule{
+			{Pattern: `\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\b`, Rule: "destructive_delete", Message: "recursive force-delete (rm -rf) is forbidden"},
+			{Pattern: `\brm\s+-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*\b`, Rule: "destructive_delete", Message: "recursive force-delete (rm -fr) is forbidden"},
+			{Pattern: `\bchmod\s+-R\s+777\b`, Rule: "insecure_permissions", Message: "chmod -R 777 is forbidden"},
+			{Pattern: `\bdd\s+if=`, Rule: "raw_disk_write", Message: "raw disk writes via dd are forbidden"},
+			{Pattern: `\bgit\s+reset\s+--hard\b`, Rule: "history_destruction", Message: "git reset --hard is forbidden"},
+			{Pattern: `\bmkfs\b`, Rule: "filesystem_format", Message: "filesystem formatting (mkfs) is forbidden"},
+			{Pattern: `:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}`, Rule: "fork_bomb", Message: "fork bomb is forbidden"},
+		},
+		ProtectedPaths: []string{
+			"*/.ssh/*", "*/.aws/*", "*/.config/gh/*",
+		},
+		ProtectedBranches: []string{"main", "master"},
+		DeniedNetHosts:    []string{},
+		SecretFilePatterns: []string{
+			".env", "*.env", ".env.*", "*.pem", "id_rsa", "id_ed25519",
+			"credentials", "*/.aws/credentials", "*/.ssh/*",
+		},
+		SecretContentPatterns: []string{
+			`-----BEGIN [A-Z ]*PRIVATE KEY-----`,
+			`AKIA[0-9A-Z]{16}`,
+		},
+		ExternalSinkCommands: []string{"curl", "wget", "nc", "ncat", "scp", "telnet", "ftp"},
 	}
 }
 
