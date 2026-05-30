@@ -87,3 +87,30 @@ func TestEncodeDecisions(t *testing.T) {
 		t.Errorf("bad generic deny encode: %s", g)
 	}
 }
+
+func TestEncodeDecisionFallbacksAreFailClosed(t *testing.T) {
+	// The hard-coded fail-closed fallbacks must be valid JSON that denies.
+	claudeFallback := []byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"sanmon: internal encode error (failing closed)"}}`)
+	var c struct {
+		Hook struct {
+			Perm string `json:"permissionDecision"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal(claudeFallback, &c); err != nil {
+		t.Fatalf("claude fallback is not valid JSON: %v", err)
+	}
+	if c.Hook.Perm != "deny" {
+		t.Errorf("claude fallback must deny, got %q", c.Hook.Perm)
+	}
+
+	genericFallback := []byte(`{"decision":"deny","reason":"sanmon: internal encode error (failing closed)"}`)
+	var g struct {
+		Decision string `json:"decision"`
+	}
+	if err := json.Unmarshal(genericFallback, &g); err != nil {
+		t.Fatalf("generic fallback is not valid JSON: %v", err)
+	}
+	if g.Decision != "deny" {
+		t.Errorf("generic fallback must deny, got %q", g.Decision)
+	}
+}

@@ -175,6 +175,9 @@ func buildAction(actionType, target string, params map[string]interface{}, agent
 }
 
 // EncodeDecision renders a ValidationResult into the agent's native decision.
+// Encoding is fail-CLOSED: if marshaling ever fails, it returns a hard-coded
+// deny in the agent's shape rather than an empty body (which an agent would
+// read as "no decision" and let the tool run).
 func EncodeDecision(agent string, result ValidationResult) []byte {
 	switch agent {
 	case "claude", "codex":
@@ -191,9 +194,12 @@ func EncodeDecision(agent string, result ValidationResult) []byte {
 				"permissionDecisionReason": reason,
 			},
 		}
-		b, _ := json.Marshal(out)
+		b, err := json.Marshal(out)
+		if err != nil {
+			return []byte(`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"sanmon: internal encode error (failing closed)"}}`)
+		}
 		return b
-	default: // generic
+	default: // "generic" and any other caller
 		decision := "allow"
 		if !result.Pass {
 			decision = "deny"
@@ -203,7 +209,10 @@ func EncodeDecision(agent string, result ValidationResult) []byte {
 			"reason":     joinReasons(result.Violations),
 			"violations": result.Violations,
 		}
-		b, _ := json.Marshal(out)
+		b, err := json.Marshal(out)
+		if err != nil {
+			return []byte(`{"decision":"deny","reason":"sanmon: internal encode error (failing closed)"}`)
+		}
 		return b
 	}
 }
