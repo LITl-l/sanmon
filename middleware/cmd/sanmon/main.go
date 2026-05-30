@@ -35,6 +35,8 @@ func main() {
 		runSchema(os.Args[2:])
 	case "guard":
 		runGuard(os.Args[2:])
+	case "init":
+		runInit(os.Args[2:])
 	case "version":
 		fmt.Println("sanmon", version)
 	case "help", "--help", "-h":

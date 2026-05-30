@@ -8,6 +8,13 @@ import (
 	"github.com/sanmon/middleware/pkg/sanmon"
 )
 
+// knownAgents is the set of agents accepted by runGuard.
+var knownAgents = map[string]bool{
+	"generic": true,
+	"claude":  true,
+	"codex":   true,
+}
+
 // runGuard implements: sanmon guard --agent <name> [--policy <path>]
 // It reads an agent's proposed tool call as JSON on stdin and writes that
 // agent's native allow/deny decision as JSON on stdout (only). Diagnostics go
@@ -28,6 +35,25 @@ func runGuard(args []string) {
 			if i < len(args) {
 				policyPath = args[i]
 			}
+		}
+	}
+
+	// Fix 2: validate --agent early, before reading stdin.
+	if !knownAgents[agent] {
+		fatalf("unknown agent %q (want: generic|claude|codex)", agent)
+	}
+
+	// Fix 1: if --policy was explicitly provided and the file does not exist,
+	// fail-closed immediately (do NOT fall back to permissive default).
+	if policyPath != "" {
+		if _, err := os.Stat(policyPath); err != nil {
+			if os.IsNotExist(err) {
+				// We don't have class yet; use ClassDestructive to be conservative.
+				guardFailClosed(agent, sanmon.ClassDestructive, "policy file not found: "+policyPath)
+			} else {
+				guardFailClosed(agent, sanmon.ClassDestructive, "cannot stat policy file: "+err.Error())
+			}
+			return
 		}
 	}
 
@@ -57,7 +83,20 @@ func runGuard(args []string) {
 	result := sanmon.NewEngine(policy).Validate(action)
 	out := sanmon.EncodeDecision(agent, result)
 	fmt.Fprintln(os.Stdout, string(out))
-	// Decision is in the JSON body; exit 0 so the agent reads stdout.
+
+	// Fix 3: generic denies exit 2 so exit-code-driven callers detect a block.
+	// claude/codex always exit 0 (the decision rides in the JSON body).
+	os.Exit(guardExitCode(agent, result.Pass))
+}
+
+// guardExitCode returns the process exit code for a completed decision.
+// generic denies exit 2 (so exit-code-driven callers detect a block);
+// claude/codex always exit 0 (the decision rides in the JSON body).
+func guardExitCode(agent string, pass bool) int {
+	if agent == "generic" && !pass {
+		return 2
+	}
+	return 0
 }
 
 // guardFailClosed applies the asymmetric failure policy: destructive actions
