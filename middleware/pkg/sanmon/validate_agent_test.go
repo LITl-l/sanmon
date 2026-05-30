@@ -15,6 +15,7 @@ func agentAction(actionType, target string, params map[string]interface{}) *Acti
 	}
 }
 
+// validateShellExec/validateFileMutation are still nil stubs at this commit, so this test documents the dispatcher routing + that these benign commands must continue to pass once real rules land in later tasks.
 func TestAgentBenignPasses(t *testing.T) {
 	p := StarterAgentPolicy()
 	cases := []*Action{
@@ -36,5 +37,30 @@ func TestNormalizeCommand(t *testing.T) {
 	want := "rm -rf ~/"
 	if got != want {
 		t.Errorf("normalizeCommand = %q, want %q", got, want)
+	}
+}
+
+func TestPathMatchesAnyAbsolute(t *testing.T) {
+	protected := []string{"*/.ssh/*", "*/.aws/*", "*/.config/gh/*"}
+	mustMatch := []string{
+		"/home/user/.ssh/id_rsa",
+		"/root/.ssh/authorized_keys",
+		"/home/u/.aws/credentials",
+		"~/.ssh/config",
+	}
+	for _, p := range mustMatch {
+		if !pathMatchesAny(p, protected) {
+			t.Errorf("expected %q to match a protected path", p)
+		}
+	}
+	mustNotMatch := []string{
+		"src/main.go",
+		"/home/user/project/src/main.go",
+		"/home/user/dotssh/file",
+	}
+	for _, p := range mustNotMatch {
+		if pathMatchesAny(p, protected) {
+			t.Errorf("expected %q NOT to match a protected path", p)
+		}
 	}
 }

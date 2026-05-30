@@ -64,15 +64,30 @@ func commandForAction(a *Action) string {
 	return a.Target
 }
 
-// pathMatchesAny reports whether p matches any glob (path.Match) in patterns.
-func pathMatchesAny(p string, patterns []string) bool {
-	base := path.Base(p)
+// pathMatchesAny reports whether filePath matches any glob in patterns.
+// path.Match wildcards do not cross "/", so we also test the basename and every
+// trailing path suffix — this lets a segment glob like "*/.ssh/*" match an
+// absolute path such as "/home/user/.ssh/id_rsa".
+func pathMatchesAny(filePath string, patterns []string) bool {
+	base := path.Base(filePath)
+	segs := strings.Split(filePath, "/")
+	suffixes := make([]string, 0, len(segs))
+	for i := range segs {
+		if s := strings.Join(segs[i:], "/"); s != "" {
+			suffixes = append(suffixes, s)
+		}
+	}
 	for _, pat := range patterns {
-		if ok, _ := path.Match(pat, p); ok {
+		if ok, _ := path.Match(pat, filePath); ok {
 			return true
 		}
 		if ok, _ := path.Match(pat, base); ok {
 			return true
+		}
+		for _, suf := range suffixes {
+			if ok, _ := path.Match(pat, suf); ok {
+				return true
+			}
 		}
 	}
 	return false

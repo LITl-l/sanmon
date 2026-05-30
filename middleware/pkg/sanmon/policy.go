@@ -173,7 +173,7 @@ func StarterAgentPolicy() AgentPolicy {
 			{Pattern: `\bdd\s+if=`, Rule: "raw_disk_write", Message: "raw disk writes via dd are forbidden"},
 			{Pattern: `\bgit\s+reset\s+--hard\b`, Rule: "history_destruction", Message: "git reset --hard is forbidden"},
 			{Pattern: `\bmkfs\b`, Rule: "filesystem_format", Message: "filesystem formatting (mkfs) is forbidden"},
-			{Pattern: `:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}`, Rule: "fork_bomb", Message: "fork bomb is forbidden"},
+			{Pattern: `:\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}`, Rule: "fork_bomb", Message: "fork bomb is forbidden"},
 		},
 		ProtectedPaths: []string{
 			"*/.ssh/*", "*/.aws/*", "*/.config/gh/*",
