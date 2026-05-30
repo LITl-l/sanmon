@@ -1,12 +1,12 @@
+import VerifiedGuardrails.Action
+import VerifiedGuardrails.Safety
+
 /-!
 # Policy Formalization
 
 Lean representations of CUE policies.
 Auto-generated theorems will be placed here by the cue2lean tool.
 -/
-
-import VerifiedGuardrails.Action
-import VerifiedGuardrails.Safety
 
 namespace VerifiedGuardrails.Policy
 
