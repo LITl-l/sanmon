@@ -2,6 +2,7 @@ package sanmon
 
 import (
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -93,8 +94,29 @@ func pathMatchesAny(filePath string, patterns []string) bool {
 	return false
 }
 
-// validateShellExec, validateFileMutation, validateNetFetch are completed in
-// later tasks; PR1 builds them incrementally.
-func validateShellExec(a *Action, p *AgentPolicy) []Violation   { return nil }
+func validateShellExec(a *Action, p *AgentPolicy) []Violation {
+	cmd := normalizeCommand(commandForAction(a))
+	if cmd == "" {
+		return nil
+	}
+	var violations []Violation
+
+	for _, rule := range p.DenyCommandRules {
+		re, err := regexp.Compile(rule.Pattern)
+		if err != nil {
+			continue // skip malformed policy patterns; do not crash the guard
+		}
+		if re.MatchString(cmd) {
+			violations = append(violations, Violation{
+				Rule:     "agent." + rule.Rule,
+				Message:  rule.Message,
+				Path:     "parameters.command",
+				Severity: SeverityError,
+			})
+		}
+	}
+	return violations
+}
+
 func validateFileMutation(a *Action, p *AgentPolicy) []Violation { return nil }
 func validateNetFetch(a *Action, p *AgentPolicy) []Violation     { return nil }

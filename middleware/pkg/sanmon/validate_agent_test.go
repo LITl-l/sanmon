@@ -1,6 +1,9 @@
 package sanmon
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func agentAction(actionType, target string, params map[string]interface{}) *Action {
 	if params == nil {
@@ -38,6 +41,36 @@ func TestNormalizeCommand(t *testing.T) {
 	if got != want {
 		t.Errorf("normalizeCommand = %q, want %q", got, want)
 	}
+}
+
+func TestShellDenyCommandRules(t *testing.T) {
+	p := StarterAgentPolicy()
+	cases := []struct {
+		cmd      string
+		wantRule string
+	}{
+		{"rm -rf ~/", "destructive_delete"},
+		{"rm -rf /", "destructive_delete"},
+		{"sudo rm -fr /var", "destructive_delete"},
+		{"chmod -R 777 /etc", "insecure_permissions"},
+		{"git reset --hard HEAD~3", "history_destruction"},
+	}
+	for _, c := range cases {
+		a := agentAction("shell_exec", c.cmd, map[string]interface{}{"command": c.cmd})
+		v := validateShellExec(a, &p)
+		if !hasRule(v, c.wantRule) {
+			t.Errorf("cmd %q: expected rule %q, got %v", c.cmd, c.wantRule, v)
+		}
+	}
+}
+
+func hasRule(vs []Violation, rule string) bool {
+	for _, v := range vs {
+		if v.Rule == rule || strings.HasSuffix(v.Rule, "."+rule) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestPathMatchesAnyAbsolute(t *testing.T) {
