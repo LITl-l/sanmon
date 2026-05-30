@@ -248,3 +248,19 @@ func assertHasViolation(t *testing.T, result ValidationResult, rule string) {
 	}
 	t.Errorf("expected violation %q not found; violations: %v", rule, result.Violations)
 }
+
+func TestAgentDomainRecognized(t *testing.T) {
+	engine := NewEngine(DefaultPolicy())
+	a := &Action{
+		ActionType: "shell_exec",
+		Target:     "ls -la",
+		Parameters: map[string]interface{}{"command": "ls -la"},
+		Context:    ActionContext{Authenticated: true, SessionID: "s1", Domain: "agent"},
+		Metadata:   ActionMetadata{Timestamp: "2026-01-01T00:00:00Z", AgentID: "a1", RequestID: "r1"},
+	}
+	result := engine.Validate(a)
+	// Default agent policy is permissive (empty deny lists), so a benign command passes.
+	if !result.Pass {
+		t.Errorf("expected benign agent command to pass, got violations: %v", result.Violations)
+	}
+}

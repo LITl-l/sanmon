@@ -13,6 +13,7 @@ type Policy struct {
 	Database DatabasePolicy `json:"database"`
 	IaC      IaCPolicy      `json:"iac"`
 	Approval ApprovalPolicy `json:"approval"`
+	Agent    AgentPolicy    `json:"agent"`
 }
 
 // ApprovalPolicy defines rules for document approval workflows.

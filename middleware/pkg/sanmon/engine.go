@@ -85,6 +85,12 @@ func (e *Engine) ValidateJSON(data []byte) (ValidationResult, error) {
 	return e.Validate(&a), nil
 }
 
+// TEMP STUB part 1 (TYPE) — removed in Task 2 when the real AgentPolicy lands in policy.go.
+type AgentPolicy struct{}
+
+// TEMP STUB part 2 (FUNC) — removed in Task 3 when validate_agent.go lands.
+func validateAgent(_ *Action, _ *AgentPolicy) []Violation { return nil }
+
 func (e *Engine) validatePolicy(a *Action, p *Policy) []Violation {
 	switch a.Context.Domain {
 	case "browser":
@@ -97,6 +103,8 @@ func (e *Engine) validatePolicy(a *Action, p *Policy) []Violation {
 		return validateIaC(a, &p.IaC)
 	case "approval":
 		return validateApproval(a, &p.Approval)
+	case "agent":
+		return validateAgent(a, &p.Agent)
 	default:
 		return []Violation{{
 			Rule: "unknown_domain", Message: "unknown domain: " + a.Context.Domain,
