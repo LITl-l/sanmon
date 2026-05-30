@@ -145,6 +145,7 @@ func (s *server) handleSchema(w http.ResponseWriter, r *http.Request) {
 		"database": databaseSchema(),
 		"iac":      iacSchema(),
 		"approval": approvalSchema(),
+		"agent":    agentSchema(),
 	}
 
 	domain := r.URL.Query().Get("domain")
@@ -194,7 +195,7 @@ func baseProperties() map[string]interface{} {
 			"properties": map[string]interface{}{
 				"authenticated": map[string]interface{}{"type": "boolean"},
 				"session_id":    map[string]interface{}{"type": "string", "minLength": 1},
-				"domain":        map[string]interface{}{"type": "string", "enum": []string{"browser", "api", "database", "iac"}},
+				"domain":        map[string]interface{}{"type": "string", "enum": []string{"browser", "api", "database", "iac", "approval", "agent"}},
 			},
 			"required": []string{"authenticated", "session_id", "domain"},
 		},

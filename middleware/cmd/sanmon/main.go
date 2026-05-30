@@ -210,7 +210,7 @@ func runSchema(args []string) {
 }
 
 func domainNames() []string {
-	return []string{"browser", "api", "database", "iac", "approval"}
+	return []string{"browser", "api", "database", "iac", "approval", "agent"}
 }
 
 func generateSchemas() map[string]interface{} {
@@ -337,6 +337,22 @@ func generateSchemas() map[string]interface{} {
 					"reason": map[string]interface{}{"type": "string"},
 				},
 				"required": []string{"document"},
+			},
+		}),
+		"required": baseRequired,
+	}
+
+	// Agent
+	schemas["agent"] = map[string]interface{}{
+		"$schema":     "https://json-schema.org/draft/2020-12/schema",
+		"$id":         "https://sanmon.dev/schemas/agent-action.json",
+		"title":       "Agent Action",
+		"description": "Schema for a coding agent's own tool calls (shell, file, network, MCP)",
+		"type":        "object",
+		"properties": mergeProps(baseProps, map[string]interface{}{
+			"action_type": map[string]interface{}{
+				"type": "string",
+				"enum": []string{"shell_exec", "file_write", "file_edit", "file_read", "net_fetch", "mcp_call"},
 			},
 		}),
 		"required": baseRequired,

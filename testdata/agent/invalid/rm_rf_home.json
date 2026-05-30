@@ -1,0 +1,8 @@
+{
+  "action_type": "shell_exec",
+  "target": "rm -rf ~/",
+  "parameters": { "command": "rm -rf ~/" },
+  "context": { "authenticated": true, "session_id": "sess-bad-1", "domain": "agent" },
+  "metadata": { "timestamp": "2026-05-30T12:00:00Z", "agent_id": "agent-evil", "request_id": "req-b1" },
+  "_expected_violations": ["agent.destructive_delete"]
+}
