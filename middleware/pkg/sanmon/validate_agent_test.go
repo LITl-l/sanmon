@@ -141,6 +141,23 @@ func TestFileMutationSecretContent(t *testing.T) {
 	}
 }
 
+func TestNetFetchDeniedHost(t *testing.T) {
+	p := StarterAgentPolicy()
+	p.DeniedNetHosts = []string{"evil.example.com", "tracker.bad"}
+
+	a := agentAction("net_fetch", "https://evil.example.com/x",
+		map[string]interface{}{"url": "https://evil.example.com/x", "host": "evil.example.com"})
+	if v := validateNetFetch(a, &p); !hasRule(v, "denied_net_host") {
+		t.Errorf("expected denied_net_host, got %v", v)
+	}
+
+	ok := agentAction("net_fetch", "https://good.example.org/x",
+		map[string]interface{}{"url": "https://good.example.org/x", "host": "good.example.org"})
+	if v := validateNetFetch(ok, &p); len(v) != 0 {
+		t.Errorf("expected allowed host to pass, got %v", v)
+	}
+}
+
 func TestPathMatchesAnyAbsolute(t *testing.T) {
 	protected := []string{"*/.ssh/*", "*/.aws/*", "*/.config/gh/*"}
 	mustMatch := []string{

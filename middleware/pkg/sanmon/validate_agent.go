@@ -232,4 +232,41 @@ func validateFileMutation(a *Action, p *AgentPolicy) []Violation {
 	return violations
 }
 
-func validateNetFetch(a *Action, p *AgentPolicy) []Violation { return nil }
+func validateNetFetch(a *Action, p *AgentPolicy) []Violation {
+	host := getParamString(a.Parameters, "host")
+	if host == "" {
+		host = hostFromURL(getParamString(a.Parameters, "url"))
+	}
+	if host == "" {
+		host = hostFromURL(a.Target)
+	}
+	for _, denied := range p.DeniedNetHosts {
+		if host == denied || strings.HasSuffix(host, "."+denied) {
+			return []Violation{{
+				Rule:     "agent.denied_net_host",
+				Message:  "network access to host is forbidden: " + host,
+				Path:     "parameters.host",
+				Severity: SeverityError,
+			}}
+		}
+	}
+	return nil
+}
+
+// hostFromURL extracts the host from a URL string without failing on junk.
+func hostFromURL(raw string) string {
+	s := raw
+	if i := strings.Index(s, "://"); i >= 0 {
+		s = s[i+3:]
+	}
+	if i := strings.IndexAny(s, "/?#"); i >= 0 {
+		s = s[:i]
+	}
+	if i := strings.Index(s, "@"); i >= 0 {
+		s = s[i+1:]
+	}
+	if i := strings.Index(s, ":"); i >= 0 {
+		s = s[:i]
+	}
+	return s
+}
