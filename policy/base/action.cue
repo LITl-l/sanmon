@@ -17,12 +17,16 @@ import "time"
 	#BrowserActionType |
 	#ApiActionType |
 	#DatabaseActionType |
-	#IacActionType
+	#IacActionType |
+	#ApprovalActionType |
+	#AgentActionType
 
 #BrowserActionType: "navigate" | "click" | "fill" | "select" | "scroll" | "wait" | "screenshot"
 #ApiActionType:     "get" | "post" | "put" | "patch" | "delete"
 #DatabaseActionType: "select" | "insert" | "update" | "delete" | "create_table" | "drop_table"
 #IacActionType:     "create" | "modify" | "destroy" | "plan" | "apply"
+#ApprovalActionType: "approve" | "reject"
+#AgentActionType:   "shell_exec" | "file_write" | "file_edit" | "file_read" | "net_fetch" | "mcp_call"
 
 #Context: {
 	authenticated: bool
@@ -31,7 +35,7 @@ import "time"
 	domain:        #Domain
 }
 
-#Domain: "browser" | "api" | "database" | "iac"
+#Domain: "browser" | "api" | "database" | "iac" | "approval" | "agent"
 
 #Metadata: {
 	timestamp:  time.Format(time.RFC3339)

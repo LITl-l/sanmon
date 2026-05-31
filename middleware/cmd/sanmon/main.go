@@ -33,6 +33,10 @@ func main() {
 		runPolicy(os.Args[2:])
 	case "schema":
 		runSchema(os.Args[2:])
+	case "guard":
+		runGuard(os.Args[2:])
+	case "init":
+		runInit(os.Args[2:])
 	case "version":
 		fmt.Println("sanmon", version)
 	case "help", "--help", "-h":
@@ -54,13 +58,17 @@ Usage:
   sanmon policy --file <policy.json>   Load policy from file
   sanmon schema                        Export JSON Schema for all domains
   sanmon schema --domain <domain>      Export JSON Schema for a specific domain
+  sanmon guard --agent <name>          Guard a tool call read from stdin (generic|claude|codex)
+  sanmon init <agent>                  Install the guard hook + starter policy for an agent
   sanmon version                       Show version
   sanmon help                          Show this help
 
 Examples:
   sanmon validate testdata/valid/browser_navigate.json
   sanmon validate --dir testdata/invalid/
-  sanmon schema --domain browser`)
+  sanmon schema --domain browser
+  echo '{"tool":"shell_exec","command":"ls"}' | sanmon guard --agent generic
+  sanmon init claude --dir /path/to/project`)
 }
 
 func runValidate(args []string) {
@@ -202,7 +210,7 @@ func runSchema(args []string) {
 }
 
 func domainNames() []string {
-	return []string{"browser", "api", "database", "iac", "approval"}
+	return []string{"browser", "api", "database", "iac", "approval", "agent"}
 }
 
 func generateSchemas() map[string]interface{} {
@@ -329,6 +337,22 @@ func generateSchemas() map[string]interface{} {
 					"reason": map[string]interface{}{"type": "string"},
 				},
 				"required": []string{"document"},
+			},
+		}),
+		"required": baseRequired,
+	}
+
+	// Agent
+	schemas["agent"] = map[string]interface{}{
+		"$schema":     "https://json-schema.org/draft/2020-12/schema",
+		"$id":         "https://sanmon.dev/schemas/agent-action.json",
+		"title":       "Agent Action",
+		"description": "Schema for a coding agent's own tool calls (shell, file, network, MCP)",
+		"type":        "object",
+		"properties": mergeProps(baseProps, map[string]interface{}{
+			"action_type": map[string]interface{}{
+				"type": "string",
+				"enum": []string{"shell_exec", "file_write", "file_edit", "file_read", "net_fetch", "mcp_call"},
 			},
 		}),
 		"required": baseRequired,

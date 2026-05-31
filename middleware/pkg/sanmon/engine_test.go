@@ -248,3 +248,67 @@ func assertHasViolation(t *testing.T, result ValidationResult, rule string) {
 	}
 	t.Errorf("expected violation %q not found; violations: %v", rule, result.Violations)
 }
+
+func TestAgentGoldenFiles(t *testing.T) {
+	// Agent golden files run against the STARTER (protective) policy, because
+	// the default policy is intentionally permissive.
+	policy := DefaultPolicy()
+	policy.Agent = StarterAgentPolicy()
+	engine := NewEngine(policy)
+
+	valid, _ := filepath.Glob("../../../testdata/agent/valid/*.json")
+	if len(valid) == 0 {
+		t.Fatal("no valid agent golden files found")
+	}
+	for _, f := range valid {
+		t.Run("valid/"+filepath.Base(f), func(t *testing.T) {
+			data, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			result, err := engine.ValidateJSON(data)
+			if err != nil {
+				t.Fatalf("validate: %v", err)
+			}
+			if !result.Pass {
+				t.Errorf("expected pass, got %v", result.Violations)
+			}
+		})
+	}
+
+	invalid, _ := filepath.Glob("../../../testdata/agent/invalid/*.json")
+	if len(invalid) == 0 {
+		t.Fatal("no invalid agent golden files found")
+	}
+	for _, f := range invalid {
+		t.Run("invalid/"+filepath.Base(f), func(t *testing.T) {
+			data, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			result, err := engine.ValidateJSON(data)
+			if err != nil {
+				t.Fatalf("validate: %v", err)
+			}
+			if result.Pass {
+				t.Errorf("expected failure for %s", filepath.Base(f))
+			}
+		})
+	}
+}
+
+func TestAgentDomainRecognized(t *testing.T) {
+	engine := NewEngine(DefaultPolicy())
+	a := &Action{
+		ActionType: "shell_exec",
+		Target:     "ls -la",
+		Parameters: map[string]interface{}{"command": "ls -la"},
+		Context:    ActionContext{Authenticated: true, SessionID: "s1", Domain: "agent"},
+		Metadata:   ActionMetadata{Timestamp: "2026-01-01T00:00:00Z", AgentID: "a1", RequestID: "r1"},
+	}
+	result := engine.Validate(a)
+	// Default agent policy is permissive (empty deny lists), so a benign command passes.
+	if !result.Pass {
+		t.Errorf("expected benign agent command to pass, got violations: %v", result.Violations)
+	}
+}

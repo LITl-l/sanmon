@@ -1,0 +1,8 @@
+{
+  "action_type": "file_write",
+  "target": "/home/u/.ssh/authorized_keys",
+  "parameters": { "path": "/home/u/.ssh/authorized_keys", "content": "ssh-rsa AAAA" },
+  "context": { "authenticated": true, "session_id": "sess-bad-3", "domain": "agent" },
+  "metadata": { "timestamp": "2026-05-30T12:00:00Z", "agent_id": "agent-evil", "request_id": "req-b3" },
+  "_expected_violations": ["agent.protected_path_write"]
+}

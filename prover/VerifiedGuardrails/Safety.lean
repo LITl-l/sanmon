@@ -1,10 +1,10 @@
+import VerifiedGuardrails.Action
+
 /-!
 # Safety Properties
 
 Defines what it means for a state to be safe and for an action to be safe.
 -/
-
-import VerifiedGuardrails.Action
 
 namespace VerifiedGuardrails
 

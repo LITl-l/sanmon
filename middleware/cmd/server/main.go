@@ -145,6 +145,7 @@ func (s *server) handleSchema(w http.ResponseWriter, r *http.Request) {
 		"database": databaseSchema(),
 		"iac":      iacSchema(),
 		"approval": approvalSchema(),
+		"agent":    agentSchema(),
 	}
 
 	domain := r.URL.Query().Get("domain")
@@ -194,7 +195,7 @@ func baseProperties() map[string]interface{} {
 			"properties": map[string]interface{}{
 				"authenticated": map[string]interface{}{"type": "boolean"},
 				"session_id":    map[string]interface{}{"type": "string", "minLength": 1},
-				"domain":        map[string]interface{}{"type": "string", "enum": []string{"browser", "api", "database", "iac"}},
+				"domain":        map[string]interface{}{"type": "string", "enum": []string{"browser", "api", "database", "iac", "approval", "agent"}},
 			},
 			"required": []string{"authenticated", "session_id", "domain"},
 		},
@@ -275,4 +276,10 @@ func approvalSchema() map[string]interface{} {
 		"required": []string{"document"},
 	}
 	return schema
+}
+
+func agentSchema() map[string]interface{} {
+	return makeSchema("agent", "Agent Action",
+		"Schema for a coding agent's own tool calls (shell, file, network, MCP)",
+		[]string{"shell_exec", "file_write", "file_edit", "file_read", "net_fetch", "mcp_call"})
 }
