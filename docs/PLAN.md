@@ -17,7 +17,8 @@ The validation engine is shipped and demo-ready; some original architecture choi
 - **The server is `net/http` JSON, not gRPC.** `proto/guardrails.proto` exists but is unused; gRPC is deferred.
 - **Domains shipped:** browser, api, database, iac, approval, **agent** (the universal pre-execution guard — `sanmon guard` / `sanmon init`), beyond the original four.
 - **Shell analysis uses a real parser** (`mvdan.cc/sh`): commands are extracted across pipelines/lists/subshells and literalized, defeating quote-insertion obfuscation; structural detectors catch recursive-force deletes and decode-and-execute chains. Runtime value expansion (`$VAR`, `$(...)`) is still not simulated.
-- **No filesystem hot-reload or latency benchmark yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
+- **Observability:** every guard decision emits a structured JSON Lines audit record (`SANMON_AUDIT` sink: stderr/file/off). Validation latency is benchmarked and held to a < 10 ms budget (`TestValidateLatencyBudget`; actual ~tens of µs).
+- **No filesystem hot-reload yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
 - **CI:** Go build/vet/test + CUE vet + schema-drift guard run in `.github/workflows/ci.yml`. Lean proof CI is still pending.
 
 ---

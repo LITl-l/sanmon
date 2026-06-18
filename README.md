@@ -76,7 +76,16 @@ over `allow` is **machine-checked in Lean** (`just lean-build`), not just assert
 
 The starter policy covers: `agent.destructive_delete`, `agent.secret_exfiltration`,
 `agent.protected_path_write`, `agent.force_push`, `agent.remote_code_execution`,
-`agent.secret_in_write`, `agent.denied_net_host`.
+`agent.obfuscated_execution`, `agent.secret_in_write`, `agent.denied_net_host`.
+
+### Audit logging
+
+Every decision emits a structured JSON Lines audit record (decision, mode,
+action type/target, violated rules, latency). The sink is set by `SANMON_AUDIT`:
+unset/`stderr` → stderr (default), a path → appended to that file, `off` →
+disabled. The decision on stdout and the exit code are never affected. Validation
+latency is held to a < 10 ms budget by `TestValidateLatencyBudget` (actual is
+tens of microseconds).
 
 ### Supported agents
 
