@@ -102,9 +102,10 @@ cd sanmon
 direnv allow   # or: nix develop
 
 # Verify toolchain
-just policy-check   # Validate CUE policies
-just schema         # Generate JSON Schema from CUE
-just proto          # Generate gRPC Go code
+just policy-check   # Validate CUE policies (cue vet)
+just schema         # Export JSON Schema via the Go CLI
+just check          # Go vet + build + test (the CI gate)
+just proto          # Generate gRPC Go code (planned; unused today)
 just lean-build     # Build Lean proofs
 just test           # Run golden test suite
 ```
@@ -119,13 +120,15 @@ sanmon/
 │       ├── browser/       # Playwright / browser automation
 │       ├── api/           # MCP / function calling
 │       ├── database/      # SQL / DB operations
-│       └── iac/           # Infrastructure-as-code
+│       ├── iac/           # Infrastructure-as-code
+│       ├── approval/      # Document-approval workflows
+│       └── agent/         # Coding-agent tool calls (universal guard)
 ├── testdata/          # Golden test suite (valid/invalid per domain)
-├── middleware/         # Go: sanmon-core library + gRPC server
+├── middleware/         # Go: sanmon-core library + HTTP server + CLI
 │   ├── pkg/sanmon/        # Core validation library (in-process)
-│   ├── cmd/server/        # Thin gRPC wrapper
-│   ├── internal/retry/    # Re-prompt loop
-│   └── proto/             # Protobuf definitions
+│   ├── cmd/sanmon/        # CLI: validate / guard / init / schema / policy
+│   ├── cmd/server/        # Thin net/http JSON wrapper
+│   └── proto/             # Protobuf definitions (gRPC planned; unused today)
 ├── prover/            # Lean 4: meta-proofs
 │   └── VerifiedGuardrails/
 │       ├── Action.lean    # Action model (inductive types)
@@ -143,7 +146,7 @@ sanmon/
 | Schema + Policy | CUE | Single source of truth for structure and constraints |
 | Runtime | Go | Native CUE support, low latency, library-first design |
 | Proofs | Lean 4 | Modern theorem prover, active ecosystem, AI affinity |
-| API | gRPC (+ optional REST) | Framework-agnostic integration |
+| API | HTTP/JSON (`cmd/server`) + stdin guard codec (`sanmon guard`); gRPC planned | Framework-agnostic integration |
 | CI | GitHub Actions + Nix | Reproducible, automated verification |
 
 ## The Three Gates
