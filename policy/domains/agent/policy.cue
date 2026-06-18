@@ -23,6 +23,16 @@ package agent
 	message: string
 }
 
+// Built-in structural detectors (not policy-configurable) run in addition to
+// deny_command_rules. They operate on the parsed shell AST rather than regex,
+// so they resist obfuscation that pattern matching cannot express:
+//   - destructive_delete: `rm` combining recursive + force flags in any order
+//     or form (-r -f, -rf, --recursive --force).
+//   - obfuscated_execution: a decoder (base64 -d, xxd -r, openssl enc -d, …)
+//     piped together with a shell interpreter (sh/bash/zsh/dash/ksh).
+// Denylist patterns below are matched against each command's literalized
+// reconstruction, so quote-insertion (r''m, "rm") does not evade them.
+
 // Starter (opt-in, protective) policy.
 // Until CUE→Go generation lands (follow-up), edits to this starter policy
 // MUST also be made in StarterAgentPolicy() in middleware/pkg/sanmon/policy.go.
