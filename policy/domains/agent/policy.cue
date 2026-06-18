@@ -34,8 +34,11 @@ package agent
 // reconstruction, so quote-insertion (r''m, "rm") does not evade them.
 
 // Starter (opt-in, protective) policy.
-// Until CUE→Go generation lands (follow-up), edits to this starter policy
-// MUST also be made in StarterAgentPolicy() in middleware/pkg/sanmon/policy.go.
+// This must stay identical to StarterAgentPolicy() in
+// middleware/pkg/sanmon/policy.go. The invariant is ENFORCED by
+// TestStarterAgentPolicyMatchesCUE, which decodes this `policy` value and
+// diffs it against the Go struct — drift fails CI. (Generating one from the
+// other automatically remains a follow-up.)
 policy: {
 	deny_command_rules: [...#CommandRule] | *[
 		{pattern: #"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\b"#, rule: "destructive_delete", message: "recursive force-delete (rm -rf) is forbidden"},
@@ -44,6 +47,7 @@ policy: {
 		{pattern: #"\bdd\s+if="#, rule: "raw_disk_write", message: "raw disk writes via dd are forbidden"},
 		{pattern: #"\bgit\s+reset\s+--hard\b"#, rule: "history_destruction", message: "git reset --hard is forbidden"},
 		{pattern: #"\bmkfs\b"#, rule: "filesystem_format", message: "filesystem formatting (mkfs) is forbidden"},
+		{pattern: #":\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}"#, rule: "fork_bomb", message: "fork bomb is forbidden"},
 	]
 	protected_paths: [...string] | *["*/.ssh/*", "*/.aws/*", "*/.config/gh/*"]
 	protected_branches: [...string] | *["main", "master"]

@@ -13,11 +13,12 @@
 
 The validation engine is shipped and demo-ready; some original architecture choices changed in implementation. Checkboxes below reflect this. Notable divergences from the original plan:
 
-- **Schema generation is done by the Go CLI (`sanmon schema`), not `cue export`.** The CUE files under `policy/` are a hand-maintained mirror of the Go types, validated by `cue vet`. Making CUE the *generative* source of truth (CUE → Go / CUE → JSON Schema) remains the headline follow-up.
+- **Schema generation is done by the Go CLI (`sanmon schema`), not `cue export`.** The CUE files under `policy/` mirror the Go types and are validated by `cue vet`. Drift is now guarded: a CI step regenerates and diffs `schema/generated/`, and `TestStarterAgentPolicyMatchesCUE` decodes the agent CUE policy and diffs it against `StarterAgentPolicy()` so Go↔CUE divergence fails CI. Generating one from the other *automatically* (CUE → Go) remains the headline follow-up.
 - **The server is `net/http` JSON, not gRPC.** `proto/guardrails.proto` exists but is unused; gRPC is deferred.
 - **Domains shipped:** browser, api, database, iac, approval, **agent** (the universal pre-execution guard — `sanmon guard` / `sanmon init`), beyond the original four.
+- **Shell analysis uses a real parser** (`mvdan.cc/sh`): commands are extracted across pipelines/lists/subshells and literalized, defeating quote-insertion obfuscation; structural detectors catch recursive-force deletes and decode-and-execute chains. Runtime value expansion (`$VAR`, `$(...)`) is still not simulated.
 - **No filesystem hot-reload or latency benchmark yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
-- **CI:** Go build/vet/test + CUE vet run in `.github/workflows/ci.yml`. Lean proof CI and schema-drift detection are still pending.
+- **CI:** Go build/vet/test + CUE vet + schema-drift guard run in `.github/workflows/ci.yml`. Lean proof CI is still pending.
 
 ---
 
