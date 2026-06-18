@@ -88,6 +88,29 @@ func TestGuardE2E(t *testing.T) {
 	}
 }
 
+func TestGuardEmitsAuditLine(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go toolchain not on PATH")
+	}
+	bin := buildGuardBinary(t)
+	policy := writeStarterPolicy(t, bin)
+
+	// A blocked command must produce a structured audit record on stderr.
+	_, stderr, _ := runGuardCLI(t, bin, policy, `{"tool":"shell_exec","command":"rm -rf ~"}`)
+	var rec struct {
+		Decision string   `json:"decision"`
+		Mode     string   `json:"mode"`
+		Rules    []string `json:"rules"`
+	}
+	line := strings.TrimSpace(stderr)
+	if err := json.Unmarshal([]byte(line), &rec); err != nil {
+		t.Fatalf("audit line on stderr is not JSON: %q (%v)", stderr, err)
+	}
+	if rec.Decision != "deny" || rec.Mode != "evaluated" || len(rec.Rules) == 0 {
+		t.Errorf("unexpected audit record: %+v (stderr=%q)", rec, stderr)
+	}
+}
+
 func TestGuardFailClosedOnGarbage(t *testing.T) {
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("go toolchain not on PATH")

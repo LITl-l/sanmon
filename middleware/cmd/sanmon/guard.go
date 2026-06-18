@@ -4,9 +4,37 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/sanmon/middleware/pkg/sanmon"
 )
+
+// emitAudit stamps the record with the current time and writes it to the audit
+// sink selected by SANMON_AUDIT:
+//   - unset or "stderr": write the JSON Lines record to stderr (default)
+//   - "off":             disable audit logging
+//   - any other value:   treat as a file path, appended to (falls back to
+//     stderr if the file cannot be opened)
+//
+// Audit logging never affects the decision on stdout or the exit code.
+func emitAudit(rec sanmon.AuditRecord) {
+	rec.Time = time.Now().UTC().Format(time.RFC3339)
+	switch v := os.Getenv("SANMON_AUDIT"); v {
+	case "off":
+		return
+	case "", "stderr":
+		sanmon.WriteAudit(os.Stderr, rec)
+	default:
+		f, err := os.OpenFile(v, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "sanmon guard: cannot open audit file, using stderr: "+err.Error())
+			sanmon.WriteAudit(os.Stderr, rec)
+			return
+		}
+		defer f.Close()
+		sanmon.WriteAudit(f, rec)
+	}
+}
 
 // knownAgents is the set of agents accepted by runGuard.
 var knownAgents = map[string]bool{
@@ -86,6 +114,7 @@ func runGuard(args []string) {
 	result := sanmon.NewEngine(policy).Validate(action)
 	out := sanmon.EncodeDecision(agent, result)
 	fmt.Fprintln(os.Stdout, string(out))
+	emitAudit(sanmon.AuditForDecision(agent, action, result))
 
 	// Fix 3: generic denies exit 2 so exit-code-driven callers detect a block.
 	// claude/codex always exit 0 (the decision rides in the JSON body).
@@ -106,6 +135,7 @@ func guardExitCode(agent string, pass bool) int {
 // are blocked (exit 2, reason on stderr); read-class actions are allowed
 // (emit an allow decision, exit 0).
 func guardFailClosed(agent string, class sanmon.ActionClass, reason string) {
+	emitAudit(sanmon.AuditFailClosed(agent, class, reason))
 	if class == sanmon.ClassRead {
 		fmt.Fprintln(os.Stdout, string(sanmon.EncodeDecision(agent, passResult())))
 		return
