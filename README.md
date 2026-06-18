@@ -92,7 +92,8 @@ The starter policy covers: `agent.destructive_delete`, `agent.secret_exfiltratio
 
 - **Unknown tool names fail open.** A tool sanmon doesn't recognize is treated as read-class (allowed) rather than blocked, to avoid breaking benign tools. Recognized destructive tools (shell, file write/edit) fail closed.
 - **MCP tool calls are not yet inspected.** `mcp_call` actions pass through; per-server/per-tool MCP policy is planned.
-- **Shell parsing is shape-based, not a full parser.** Pipeline/quote handling is intentionally simple and errs toward over-blocking (false positives) rather than under-blocking. Deeper data-flow analysis (variables, subshells, base64) is planned.
+- **Shell commands are parsed with a real shell parser** (`mvdan.cc/sh`). Commands are extracted across pipelines, `&&`/`||`/`;` lists, subshells, and command substitutions, and each word is reduced to its static literal value — so quote-insertion obfuscation (`r''m -rf`, `"rm"`, `ch""mod`) no longer evades the denylist. Built-in structural detectors additionally catch recursive-force deletes in any flag order (`rm -r -f`, `rm --recursive --force`) and decode-and-execute chains (`… | base64 -d | sh`).
+- **Runtime value expansion is still not resolved.** Tokens whose value comes from a parameter, command substitution, or arithmetic expansion (`$VAR`, `$IFS`, `$(echo rm)`) are treated as empty — sanmon analyzes the static command shape, not a simulated execution. It errs toward over-blocking. Simulated/data-flow expansion is future work.
 
 ## Quick Start
 

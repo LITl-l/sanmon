@@ -119,24 +119,67 @@ func segmentIsExternalSink(seg string, sinks []string) bool {
 }
 
 func validateShellExec(a *Action, p *AgentPolicy) []Violation {
-	cmd := normalizeCommand(commandForAction(a))
+	raw := commandForAction(a)
+	cmd := normalizeCommand(raw)
 	if cmd == "" {
 		return nil
 	}
-	var violations []Violation
 
+	var violations []Violation
+	seen := map[string]bool{}
+	add := func(rule, msg string) {
+		if seen[rule] {
+			return
+		}
+		seen[rule] = true
+		violations = append(violations, Violation{
+			Rule:     "agent." + rule,
+			Message:  msg,
+			Path:     "parameters.command",
+			Severity: SeverityError,
+		})
+	}
+
+	parsed, parsedOK := parseShellCommands(raw)
+
+	// Denylist regexes scan each parsed command's literalized reconstruction
+	// (which defeats quote-insertion obfuscation such as `r''m` / `"rm"`) plus
+	// the normalized raw line, so a parse failure or unusual structure can
+	// never silently drop a match.
+	scanTargets := []string{cmd}
+	for _, c := range parsed {
+		scanTargets = append(scanTargets, c.line)
+	}
 	for _, rule := range p.DenyCommandRules {
 		re, err := regexp.Compile(rule.Pattern)
 		if err != nil {
 			continue // skip malformed policy patterns; do not crash the guard
 		}
-		if re.MatchString(cmd) {
-			violations = append(violations, Violation{
-				Rule:     "agent." + rule.Rule,
-				Message:  rule.Message,
-				Path:     "parameters.command",
-				Severity: SeverityError,
-			})
+		for _, t := range scanTargets {
+			if re.MatchString(t) {
+				add(rule.Rule, rule.Message)
+				break
+			}
+		}
+	}
+
+	// Structural detectors over parsed commands catch obfuscation-resistant
+	// patterns a regex over a single flag token cannot express.
+	if parsedOK {
+		hasDecoder, hasShell := false, false
+		for _, c := range parsed {
+			if isRecursiveForceDelete(c) {
+				add("destructive_delete", "recursive force-delete (rm with -r and -f) is forbidden")
+			}
+			if isDecoder(c) {
+				hasDecoder = true
+			}
+			if rceShells[c.name] {
+				hasShell = true
+			}
+		}
+		if hasDecoder && hasShell && len(parsed) >= 2 {
+			add("obfuscated_execution", "decodes opaque content and pipes it into a shell interpreter")
 		}
 	}
 
@@ -158,33 +201,17 @@ func validateShellExec(a *Action, p *AgentPolicy) []Violation {
 		}
 	}
 	if readsSecret && hasExternalSink {
-		violations = append(violations, Violation{
-			Rule:     "agent.secret_exfiltration",
-			Message:  "reads a secret file and pipes it to an external host",
-			Path:     "parameters.command",
-			Severity: SeverityError,
-		})
+		add("secret_exfiltration", "reads a secret file and pipes it to an external host")
 	}
-	// PR1 intentional heuristic: fires whenever a remote-fetch command and a shell
-	// interpreter appear anywhere in the same pipeline, including &&-separated
-	// segments (e.g. `curl ... -o data.json && bash build.sh`). Requiring a
-	// literal `|` between the fetch and shell invocation is deferred to PR2.
+	// Heuristic: fires whenever a remote-fetch command and a shell interpreter
+	// appear anywhere in the same pipeline, including &&-separated segments
+	// (e.g. `curl ... -o data.json && bash build.sh`).
 	if hasRemoteFetch && pipesToShell && len(segments) >= 2 {
-		violations = append(violations, Violation{
-			Rule:     "agent.remote_code_execution",
-			Message:  "pipes remotely-fetched content into a shell interpreter",
-			Path:     "parameters.command",
-			Severity: SeverityError,
-		})
+		add("remote_code_execution", "pipes remotely-fetched content into a shell interpreter")
 	}
 
 	if isGitForcePush(cmd) {
-		violations = append(violations, Violation{
-			Rule:     "agent.force_push",
-			Message:  "force-pushing can overwrite remote history",
-			Path:     "parameters.command",
-			Severity: SeverityError,
-		})
+		add("force_push", "force-pushing can overwrite remote history")
 	}
 	return violations
 }
