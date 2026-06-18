@@ -9,6 +9,18 @@
 
 ---
 
+## Status (2026-06)
+
+The validation engine is shipped and demo-ready; some original architecture choices changed in implementation. Checkboxes below reflect this. Notable divergences from the original plan:
+
+- **Schema generation is done by the Go CLI (`sanmon schema`), not `cue export`.** The CUE files under `policy/` are a hand-maintained mirror of the Go types, validated by `cue vet`. Making CUE the *generative* source of truth (CUE → Go / CUE → JSON Schema) remains the headline follow-up.
+- **The server is `net/http` JSON, not gRPC.** `proto/guardrails.proto` exists but is unused; gRPC is deferred.
+- **Domains shipped:** browser, api, database, iac, approval, **agent** (the universal pre-execution guard — `sanmon guard` / `sanmon init`), beyond the original four.
+- **No filesystem hot-reload or latency benchmark yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
+- **CI:** Go build/vet/test + CUE vet run in `.github/workflows/ci.yml`. Lean proof CI and schema-drift detection are still pending.
+
+---
+
 ## Phase 1: CUE Schema + Policy Unification & Golden Tests
 
 **Goal**: Establish CUE as the single source of truth for both structure and policy. Build a golden test suite that drives all subsequent development.
@@ -45,23 +57,21 @@
 
 ### Tasks
 
-- [ ] Create `middleware/pkg/sanmon/` package
-  - [ ] `engine.go`: `Engine` interface (Validate, ReloadPolicies, ExportJSONSchema)
-  - [ ] `loader.go`: CUE policy loader (base + domain composition)
-  - [ ] `validator.go`: CUE runtime evaluation against loaded policies
-  - [ ] `result.go`: Structured ValidationResult (pass/fail + violations)
-- [ ] Policy composition logic
-  - [ ] AND composition (all policies must pass)
-  - [ ] Domain routing (select policy by `context.domain`)
-  - [ ] Base + domain-specific merge
-- [ ] JSON Schema export from loaded CUE (`ExportJSONSchema`)
-- [ ] Write unit tests using golden test suite from Phase 1
-  - [ ] All valid golden cases pass validation
-  - [ ] All invalid golden cases fail with expected violations
-  - [ ] Violation messages are actionable
-- [ ] Policy hot-reload (watch filesystem, atomic swap)
+- [x] Create `middleware/pkg/sanmon/` package
+  - [x] `engine.go`: `Engine` (Validate, ValidateJSON, ReloadPolicy)
+  - [x] `result.go`: Structured ValidationResult (pass/fail + violations)
+  - [x] Per-domain validators (`validate_<domain>.go`) — chosen over a single CUE-runtime evaluator
+- [x] Policy composition logic
+  - [x] Domain routing (`validatePolicy` selects policy by `context.domain`)
+  - [x] Base + domain-specific validation
+- [ ] JSON Schema export — implemented via Go (`sanmon schema`), not from loaded CUE (`ExportJSONSchema`); CUE-generative export is the follow-up
+- [x] Write unit tests using golden test suite
+  - [x] All valid golden cases pass validation
+  - [x] All invalid golden cases fail with expected violations
+  - [x] Violation messages are actionable
+- [ ] Policy hot-reload — `ReloadPolicy` does atomic in-memory swap; filesystem watch not yet implemented
 - [ ] Benchmark: confirm < 10ms validation latency
-- [ ] `just test` runs full golden suite
+- [x] `just test` runs full golden suite
 
 ### Deliverable
 Go package `middleware/pkg/sanmon` — importable library for in-process validation.
@@ -86,7 +96,7 @@ Go package `middleware/pkg/sanmon` — importable library for in-process validat
   - [ ] Re-submit to LLM with constrained decoding
   - [ ] Configurable max retries (default 3)
   - [ ] Return final result or aggregated errors
-- [ ] Add HTTP/REST gateway (optional, for non-gRPC clients)
+- [x] HTTP/REST server (`cmd/server`, net/http) — shipped as the primary transport instead of gRPC
 - [ ] Write end-to-end tests: mock LLM → validate → pass/fail → retry
 
 ### Deliverable
@@ -145,8 +155,8 @@ Lean proofs that typecheck for meta-properties of the policy system.
 
 ### Tasks
 
-- [ ] GitHub Actions workflow: CUE validation + golden tests on PR
-- [ ] GitHub Actions workflow: Go tests + lint + benchmark
+- [x] GitHub Actions workflow: Go vet + build + test on PR (`.github/workflows/ci.yml`)
+- [x] GitHub Actions workflow: CUE validation (`cue vet`) on PR
 - [ ] GitHub Actions workflow: Lean proof check on PR
 - [ ] GitHub Actions workflow: JSON Schema generation + drift detection
 - [ ] Nix-based CI (reproducible builds via `flake.nix`)

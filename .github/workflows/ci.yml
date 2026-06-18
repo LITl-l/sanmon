@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: middleware
+    env:
+      # sanmon is pure Go: static, reproducible binaries with no C toolchain.
+      CGO_ENABLED: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: middleware/go.mod
+          cache-dependency-path: middleware/go.sum
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./... -count=1
+
+  cue:
+    name: CUE policy vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: middleware/go.mod
+
+      - name: Install cue
+        run: go install cuelang.org/go/cmd/cue@latest
+
+      - name: Vet CUE policies
+        run: |
+          cue vet ./policy/base/
+          cue vet ./policy/domains/browser/
+          cue vet ./policy/domains/api/
+          cue vet ./policy/domains/database/
+          cue vet ./policy/domains/iac/
+          cue vet ./policy/domains/approval/
+          cue vet ./policy/domains/agent/

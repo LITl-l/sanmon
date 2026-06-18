@@ -8,16 +8,25 @@ default: build
 
 build: build-cli build-server
 
+# sanmon is pure Go — pin CGO_ENABLED=0 for static, reproducible binaries
+# that build without a C toolchain.
 build-cli:
-    cd middleware && go build -o ../bin/sanmon ./cmd/sanmon/
+    cd middleware && CGO_ENABLED=0 go build -o ../bin/sanmon ./cmd/sanmon/
 
 build-server:
-    cd middleware && go build -o ../bin/sanmon-server ./cmd/server/
+    cd middleware && CGO_ENABLED=0 go build -o ../bin/sanmon-server ./cmd/server/
 
 # ── Test ──
 
 test:
-    cd middleware && go test ./... -v -count=1
+    cd middleware && CGO_ENABLED=0 go test ./... -count=1
+
+# ── CI gate: vet + build + test (mirrors .github/workflows/ci.yml) ──
+
+check:
+    cd middleware && CGO_ENABLED=0 go vet ./...
+    cd middleware && CGO_ENABLED=0 go build ./...
+    cd middleware && CGO_ENABLED=0 go test ./... -count=1
 
 # ── Demo: run all validations against golden test data ──
 
@@ -70,6 +79,7 @@ policy-check:
     cue vet ./policy/domains/api/
     cue vet ./policy/domains/database/
     cue vet ./policy/domains/iac/
+    cue vet ./policy/domains/approval/
     cue vet ./policy/domains/agent/
 
 # ── Proto: Generate gRPC Go code (requires buf) ──
