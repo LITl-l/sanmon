@@ -165,8 +165,9 @@ func DefaultPolicy() *Policy {
 // `sanmon init` installs. These patterns are mirrored in
 // policy/domains/agent/policy.cue (the single source of truth).
 //
-// Until CUE→Go generation lands (follow-up), edits here MUST also be made in
-// policy/domains/agent/policy.cue.
+// The two must stay identical; TestStarterAgentPolicyMatchesCUE enforces it by
+// diffing this struct against the decoded CUE policy, so drift fails CI.
+// (Generating one from the other automatically remains a follow-up.)
 func StarterAgentPolicy() AgentPolicy {
 	return AgentPolicy{
 		DenyCommandRules: []CommandRule{

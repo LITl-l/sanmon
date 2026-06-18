@@ -45,6 +45,16 @@ jobs:
       - name: Test
         run: go test ./... -count=1
 
+      - name: Generated schemas are in sync
+        working-directory: ${{ github.workspace }}
+        run: |
+          (cd middleware && go build -o ../bin/sanmon ./cmd/sanmon)
+          for d in browser api database iac approval agent; do
+            ./bin/sanmon schema --domain "$d" > "schema/generated/$d-action.json"
+          done
+          git diff --exit-code -- schema/generated \
+            || { echo "::error::Generated schemas are stale — run 'just schema' and commit."; exit 1; }
+
   cue:
     name: CUE policy vet
     runs-on: ubuntu-latest

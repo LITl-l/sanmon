@@ -64,6 +64,17 @@ schema: build-cli
     @./bin/sanmon schema --domain agent     > schema/generated/agent-action.json
     @echo "JSON Schemas exported to schema/generated/"
 
+# Fail if committed JSON Schemas are stale vs the Go generator (CI drift guard).
+# VCS-agnostic: regenerates to a temp dir and diffs against the committed files.
+schema-check: build-cli
+    @tmp=$(mktemp -d); \
+     for d in browser api database iac approval agent; do \
+       ./bin/sanmon schema --domain "$d" > "$tmp/$d-action.json"; \
+       diff -u "schema/generated/$d-action.json" "$tmp/$d-action.json" \
+         || { echo "ERROR: schema/generated/$d-action.json is stale — run 'just schema' and commit." >&2; rm -rf "$tmp"; exit 1; }; \
+     done; \
+     rm -rf "$tmp"; echo "Generated schemas are in sync."
+
 # ── Demo: backoffice approval mock app ──
 
 demo-backoffice:
