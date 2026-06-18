@@ -19,7 +19,8 @@ The validation engine is shipped and demo-ready; some original architecture choi
 - **Shell analysis uses a real parser** (`mvdan.cc/sh`): commands are extracted across pipelines/lists/subshells and literalized, defeating quote-insertion obfuscation; structural detectors catch recursive-force deletes and decode-and-execute chains. Runtime value expansion (`$VAR`, `$(...)`) is still not simulated.
 - **Observability:** every guard decision emits a structured JSON Lines audit record (`SANMON_AUDIT` sink: stderr/file/off). Validation latency is benchmarked and held to a < 10 ms budget (`TestValidateLatencyBudget`; actual ~tens of µs).
 - **No filesystem hot-reload yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
-- **CI:** Go build/vet/test + CUE vet + schema-drift guard run in `.github/workflows/ci.yml`. Lean proof CI is still pending.
+- **Lean↔Go bridge:** the `deny_dominates` theorem (`Guard.lean`) is ported to Go as the `Decision` combinator that the engine routes pass/fail through, with `TestEngineUpholdsDenyDominates` confirming the implementation upholds the proved property. `Safety.lean`'s state-transition theorem is still a trivial placeholder.
+- **CI:** Go build/vet/test + CUE vet + schema-drift guard run in `.github/workflows/ci.yml`. Lean proof CI (`lake build`) is still pending — the Lean toolchain is not yet wired into CI.
 
 ---
 

@@ -56,7 +56,7 @@ func (e *Engine) Validate(a *Action) ValidationResult {
 
 	// If structural validation fails, skip policy checks
 	if len(structViolations) > 0 {
-		result := fail(allViolations...)
+		result := decide(allViolations)
 		result.LatencyUs = time.Since(start).Microseconds()
 		return result
 	}
@@ -65,15 +65,20 @@ func (e *Engine) Validate(a *Action) ValidationResult {
 	policyViolations := e.validatePolicy(a, policy)
 	allViolations = append(allViolations, policyViolations...)
 
-	if len(allViolations) > 0 {
-		result := fail(allViolations...)
-		result.LatencyUs = time.Since(start).Microseconds()
-		return result
-	}
-
-	result := pass()
+	result := decide(allViolations)
 	result.LatencyUs = time.Since(start).Microseconds()
 	return result
+}
+
+// decide combines the violations through the verified combinator
+// (decideViolations) and builds the result: the action passes only when the
+// combined decision is Allow. Routing pass/fail through combineAll makes the
+// Lean-proved "deny dominates" property govern the actual decision path.
+func decide(violations []Violation) ValidationResult {
+	if decideViolations(violations) == Allow {
+		return pass()
+	}
+	return fail(violations...)
 }
 
 // ValidateJSON validates a JSON-encoded action.
