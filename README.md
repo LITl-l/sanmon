@@ -70,9 +70,14 @@ normalized agent Action  ──►  three-gate engine  ──►  allow / deny +
 ```
 
 The danger analysis lives **once** in the `agent` domain validator and is shared
-by every agent, so rules never drift between integrations. Because every per-agent
-config is derived from the same CUE source, the guarantee that `deny` always wins
-over `allow` is **machine-checked in Lean** (`just lean-build`), not just asserted.
+by every agent, so rules never drift between integrations. The load-bearing
+property — that a single `deny` overrides any number of `allow`/`ask` verdicts —
+is **proved in Lean** for the decision combinator (`deny_dominates` in
+`prover/VerifiedGuardrails/Guard.lean`), and the Go engine routes its pass/fail
+through a port of that same combinator, with property tests
+(`TestEngineUpholdsDenyDominates`) confirming the implementation upholds it. (The
+state-transition safety theorem in `Safety.lean` is still a placeholder; see
+PLAN.md.)
 
 The starter policy covers: `agent.destructive_delete`, `agent.secret_exfiltration`,
 `agent.protected_path_write`, `agent.force_push`, `agent.remote_code_execution`,
