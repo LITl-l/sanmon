@@ -40,6 +40,10 @@ One CUE policy enforces safety across every agent that can pass a proposed tool
 call to an external program before running it (Claude Code, Codex, and others).
 
 ```bash
+# Grab a prebuilt binary from the latest release (or `just build` from source):
+#   https://github.com/LITl-l/sanmon/releases
+# Each release ships version-stamped linux/darwin × amd64/arm64 binaries + SHA256SUMS.
+
 # Install the guard + a protective starter policy for your agent
 sanmon init claude   # or: codex | generic
 ```
