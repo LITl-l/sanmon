@@ -1,0 +1,94 @@
+name: Release
+
+# Cuts a GitHub release when a semver tag is pushed. The tag name is stamped
+# into the binary via -ldflags, so `sanmon version` reports exactly the tag a
+# given artifact was built from.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+    env:
+      # sanmon is pure Go: static, cross-compiled binaries with no C toolchain.
+      CGO_ENABLED: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: middleware/go.mod
+          cache-dependency-path: middleware/go.sum
+
+      - name: Build version-stamped binary
+        working-directory: middleware
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          out="sanmon-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          go build -trimpath \
+            -ldflags "-s -w -X main.version=${{ github.ref_name }}" \
+            -o "../dist/$out" ./cmd/sanmon
+          echo "artifact=$out" >> "$GITHUB_ENV"
+
+      # The release is only trustworthy if the published binary reports the tag
+      # it claims to be. Verify on the runner's native arch (the others can't
+      # execute here).
+      - name: Verify version stamp
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        run: |
+          got="$(./dist/${{ env.artifact }} version)"
+          echo "$got"
+          case "$got" in
+            *"${{ github.ref_name }}"*) echo "version stamp OK" ;;
+            *) echo "::error::binary did not report tag ${{ github.ref_name }}: $got"; exit 1 ;;
+          esac
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanmon-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to create the release and upload assets.
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum sanmon-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -2,6 +2,11 @@
 
 set dotenv-load := false
 
+# Version stamped into local CLI builds. Release builds (CI) stamp the git tag
+# instead; locally we use `git describe` (nearest tag + commit, or short hash),
+# falling back to "dev" outside a git checkout.
+version := `git describe --tags --always --dirty 2>/dev/null || echo dev`
+
 default: build
 
 # ── Build ──
@@ -11,7 +16,7 @@ build: build-cli build-server
 # sanmon is pure Go — pin CGO_ENABLED=0 for static, reproducible binaries
 # that build without a C toolchain.
 build-cli:
-    cd middleware && CGO_ENABLED=0 go build -o ../bin/sanmon ./cmd/sanmon/
+    cd middleware && CGO_ENABLED=0 go build -ldflags "-X main.version={{version}}" -o ../bin/sanmon ./cmd/sanmon/
 
 build-server:
     cd middleware && CGO_ENABLED=0 go build -o ../bin/sanmon-server ./cmd/server/

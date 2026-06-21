@@ -18,7 +18,12 @@ import (
 	"github.com/sanmon/middleware/pkg/sanmon"
 )
 
-const version = "0.1.0"
+// version is the build version. It defaults to the source value but is
+// overridden at release time via -ldflags "-X main.version=<git tag>"
+// (see .github/workflows/release.yml), so a released binary reports the tag
+// it was built from. Must be a var, not a const: the linker cannot stamp a
+// constant.
+var version = "0.1.0"
 
 func main() {
 	if len(os.Args) < 2 {

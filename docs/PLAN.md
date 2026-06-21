@@ -21,6 +21,7 @@ The validation engine is shipped and demo-ready; some original architecture choi
 - **No filesystem hot-reload yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
 - **Lean↔Go bridge:** the `deny_dominates` theorem (`Guard.lean`) is ported to Go as the `Decision` combinator that the engine routes pass/fail through, with `TestEngineUpholdsDenyDominates` confirming the implementation upholds the proved property. `Safety.lean`'s state-transition theorem is still a trivial placeholder.
 - **CI:** all three gates run in `.github/workflows/ci.yml` — Go build/vet/test + schema-drift guard (第一・二門), CUE vet, and a Lean job (`leanprover/lean-action`) that builds the proofs (`lake build`, 第三門) so `deny_dominates` and friends must type-check on every change.
+- **Releases:** pushing a `v*` tag runs `.github/workflows/release.yml`, which cross-compiles version-stamped `sanmon` binaries (linux/darwin × amd64/arm64), verifies the published artifact reports its tag, and publishes a GitHub release with `SHA256SUMS`. The version is injected via `-ldflags "-X main.version=<tag>"`; local `just build` stamps `git describe`.
 
 ---
 
@@ -163,7 +164,8 @@ Lean proofs that typecheck for meta-properties of the policy system.
 - [x] GitHub Actions workflow: Lean proof check on PR (`lean` job, `leanprover/lean-action`)
 - [ ] GitHub Actions workflow: JSON Schema generation + drift detection
 - [ ] Nix-based CI (reproducible builds via `flake.nix`)
-- [ ] Badge: "Tests Passing" + "Proofs Verified" in README
+- [x] Tagged-release pipeline: version-stamped cross-platform binaries + checksums on `v*` tag (`.github/workflows/release.yml`)
+- [x] CI status badge in README (covers all three gates in one run)
 
 ### Deliverable
 `.github/workflows/` with complete CI pipeline.
