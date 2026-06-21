@@ -20,7 +20,7 @@ The validation engine is shipped and demo-ready; some original architecture choi
 - **Observability:** every guard decision emits a structured JSON Lines audit record (`SANMON_AUDIT` sink: stderr/file/off). Validation latency is benchmarked and held to a < 10 ms budget (`TestValidateLatencyBudget`; actual ~tens of µs).
 - **No filesystem hot-reload yet**; `Engine.ReloadPolicy` does atomic in-memory swap.
 - **Lean↔Go bridge:** the `deny_dominates` theorem (`Guard.lean`) is ported to Go as the `Decision` combinator that the engine routes pass/fail through, with `TestEngineUpholdsDenyDominates` confirming the implementation upholds the proved property. `Safety.lean`'s state-transition theorem is still a trivial placeholder.
-- **CI:** Go build/vet/test + CUE vet + schema-drift guard run in `.github/workflows/ci.yml`. Lean proof CI (`lake build`) is still pending — the Lean toolchain is not yet wired into CI.
+- **CI:** all three gates run in `.github/workflows/ci.yml` — Go build/vet/test + schema-drift guard (第一・二門), CUE vet, and a Lean job (`leanprover/lean-action`) that builds the proofs (`lake build`, 第三門) so `deny_dominates` and friends must type-check on every change.
 
 ---
 
@@ -145,7 +145,7 @@ Running gRPC server (`middleware/cmd/server`) importing `sanmon-core`.
 - [ ] Prove composition safety
   - [ ] Adding a new domain policy cannot break existing domain policies
   - [ ] Policy merge is associative and commutative where applicable
-- [ ] `lake build` succeeds for all proofs
+- [x] `lake build` succeeds for all proofs (built in CI via `leanprover/lean-action`)
 
 ### Deliverable
 Lean proofs that typecheck for meta-properties of the policy system.
@@ -160,7 +160,7 @@ Lean proofs that typecheck for meta-properties of the policy system.
 
 - [x] GitHub Actions workflow: Go vet + build + test on PR (`.github/workflows/ci.yml`)
 - [x] GitHub Actions workflow: CUE validation (`cue vet`) on PR
-- [ ] GitHub Actions workflow: Lean proof check on PR
+- [x] GitHub Actions workflow: Lean proof check on PR (`lean` job, `leanprover/lean-action`)
 - [ ] GitHub Actions workflow: JSON Schema generation + drift detection
 - [ ] Nix-based CI (reproducible builds via `flake.nix`)
 - [ ] Badge: "Tests Passing" + "Proofs Verified" in README

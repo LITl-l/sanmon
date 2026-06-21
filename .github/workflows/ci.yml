@@ -79,3 +79,20 @@ jobs:
           cue vet ./policy/domains/iac/
           cue vet ./policy/domains/approval/
           cue vet ./policy/domains/agent/
+
+  lean:
+    name: Lean proof check (第三門)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Installs elan, reads prover/lean-toolchain (v4.16.0), runs `lake build`.
+      # This is the third gate: the meta-proofs (deny_dominates et al.) must
+      # type-check on every change, so the property the Go engine relies on
+      # stays machine-verified — not just asserted in docs.
+      - name: Build Lean proofs
+        uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: prover
+          build: true
