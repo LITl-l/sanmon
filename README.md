@@ -1,5 +1,7 @@
 # sanmon (三門)
 
+[![CI](https://github.com/LITl-l/sanmon/actions/workflows/ci.yml/badge.svg)](https://github.com/LITl-l/sanmon/actions/workflows/ci.yml)
+
 Three-gate formal verification stack for AI agent actions.
 
 **CUE + Go + Lean** — not probabilistic guardrails, but mathematically proven safety guarantees.
